@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 set(ESROCOS_USE_CXX11 TRUE)
 find_package (esrocos)
-set(ROCK_TEST_ENABLED OFF)
+set(ROCK_TEST_ENABLED ON)
 
 option(COVERAGE "Enable code coverage. run 'make test && make coverage' to generate the coverage report. The report will be in ${CMAKE_BINARY_DIR}/cov" OFF)
 

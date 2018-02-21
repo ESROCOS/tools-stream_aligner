@@ -18,7 +18,7 @@ namespace stream_aligner
         {
             front=-1;rear=-1;
         }
-        void insert();
+        void insert(const base::Time &ts);
         void remove();
     };
 }

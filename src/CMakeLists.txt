@@ -1,6 +1,9 @@
-set(HEADERS CircularArray.hpp
+set(headers CircularArray.hpp
             TimestampEstimator.hpp)
 
-set(SOURCES CircularArray.cpp)
+set(sources CircularArray.cpp)
 
-add_library(libstream_aligner ${HEADERS} ${SOURCES})
+esrocos_library(stream_aligner
+                HEADERS ${headers}
+                SOURCES ${sources}
+                DEPS_PKGCONFIG base-types)

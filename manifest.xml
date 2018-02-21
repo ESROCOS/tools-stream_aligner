@@ -32,4 +32,9 @@
   <maintainer> ESROCOS Team/all-partners@h2020-esrocos.eu</maintainer>
   <url>https://esrocos.github.io</url>
 
+  <depend package="tools/cmake" />
+  <depend package="base/types" />
+
+  <tags>debug</tags>
+
 </package>

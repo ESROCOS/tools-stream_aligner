@@ -16,13 +16,41 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array)
     base::Time time_stamp;
     stream_aligner::CircularArray buffer;
 
-    for (int i = 0; i<10; ++i)
+    BOOST_TEST (buffer.empty());
+
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         time_stamp = base::Time::now();
-        std::cout<<"Time stamp "<<time_stamp.toString()<<std::endl;
-        buffer.insert(time_stamp);
+        std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
+
+        if (i == buffer.capacity())
+        {
+            BOOST_TEST (buffer.full());
+            BOOST_TEST(!buffer.push(time_stamp));
+        }
+        else
+        {
+            BOOST_TEST(buffer.push(time_stamp));
+        }
+
         sleep(1);
     }
 
+    BOOST_TEST (buffer.full());
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
+    {
+        time_stamp = buffer.pop();
+        if (time_stamp.isNull())
+        {
+            std::cout<<"["<< i <<"]Pop time_stamp is NULL" <<std::endl;
+        }
+        else
+        {
+            BOOST_TEST (!time_stamp.isNull());
+            std::cout<<"["<< i <<"]Pop time_stamp "<<time_stamp.toString()<<std::endl;
+        }
+    }
+
+    BOOST_TEST (buffer.empty());
 }
 

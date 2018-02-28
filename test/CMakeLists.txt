@@ -1,5 +1,4 @@
 esrocos_testsuite(circulararray-test test_circulararray.cpp
-    DEPS stream_aligner
     DEPS_PKGCONFIG base-types)
 
 esrocos_testsuite(timestamp-test test_timestamp.cpp

@@ -1,4 +1,6 @@
 set(headers CircularArray.hpp
+            TimestampConfig.hpp
+            TimestampStatus.hpp
             TimestampEstimator.hpp)
 
 set(sources TimestampEstimator.cpp)

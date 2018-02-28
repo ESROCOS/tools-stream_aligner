@@ -80,20 +80,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
     }
 
     BOOST_TEST (buffer.full());
-    for (size_t i = 0; i<buffer.capacity()+1; ++i)
-    {
-        time_stamp = buffer.pop();
-        if (time_stamp.isNull())
-        {
-            std::cout<<"["<< i <<"]Pop time_stamp is NULL" <<std::endl;
-        }
-        else
-        {
-            BOOST_TEST (!time_stamp.isNull());
-            std::cout<<"["<< i <<"]Pop time_stamp "<<time_stamp.toString()<<std::endl;
-        }
-    }
-
+    buffer.clear();
     BOOST_TEST (buffer.empty());
 }
 

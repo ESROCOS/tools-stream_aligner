@@ -21,7 +21,7 @@ namespace stream_aligner
          */
         CircularArray()
         {
-            front=-1;rear=-1;
+            this->clear();
         }
 
         /** @brief insert an element
@@ -118,16 +118,28 @@ namespace stream_aligner
             return false;
         };
 
-        /** @brief size
+        /** @brief capacity
          *
          *
          *  @param void.
-         *  @return fixed size of the array.
+         *  @return temoplate size of the array.
          */
         size_t capacity()
         {
             return CircularArray::size;
         };
+
+        /** @brief clear
+         *
+         *
+         *  @param void.
+         *  @return void.
+         */
+        void clear()
+        {
+            front=-1;rear=-1;
+        };
+
     };
 }
 #endif

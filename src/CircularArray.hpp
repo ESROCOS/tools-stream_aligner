@@ -2,17 +2,18 @@
 #define STREAM_ALIGNER_CIRCULAR_ARRAY_HPP
 
 #include <array>
+#include <base/Float.hpp>
 #include <base/Time.hpp>
 
 namespace stream_aligner
 {
-    template <size_t N = 10>
+    template <class T = base::Time, size_t N = 10>
     class CircularArray
     {
     private:
         static const std::size_t capacity = N;
     protected:
-        std::array<base::Time, capacity> data;
+        std::array<T, capacity> data;
         int front,rear;
     public:
         /** @brief Constructor
@@ -32,7 +33,7 @@ namespace stream_aligner
          *  @param ts the element.
          *  @return void.
          */
-        void push(const base::Time &ts)
+        void push(const T &ts)
         {
             if(this->full())
             {
@@ -63,9 +64,9 @@ namespace stream_aligner
          *  @param void.
          *  @return void.
          */
-        base::Time pop()
+        T pop()
         {
-            base::Time ts =  base::Time::fromMicroseconds(0);
+            T ts =  base::NaN<T>(); 
 
             if(this->empty())
             {

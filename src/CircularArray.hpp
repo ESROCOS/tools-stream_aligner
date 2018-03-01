@@ -10,9 +10,9 @@ namespace stream_aligner
     class CircularArray
     {
     private:
-        static const std::size_t size = N;
+        static const std::size_t capacity = N;
     protected:
-        std::array<base::Time,size> data;
+        std::array<base::Time, capacity> data;
         int front,rear;
     public:
         /** @brief Constructor
@@ -32,24 +32,25 @@ namespace stream_aligner
          *  @param ts the element.
          *  @return void.
          */
-        bool push(const base::Time &ts)
+        void push(const base::Time &ts)
         {
             if(this->full())
             {
-                return false;
+                this->pop();
             }
-            else if(rear == -1)
+
+            if(rear == -1)
             {
                 rear++;
                 front++;
             }
-            else if(rear==CircularArray::size-1)
+            else if(rear==CircularArray::capacity-1)
                 rear=0;
             else
                 rear++;
 
             data[rear] = ts;
-            return true;
+            return;
 
         };
 
@@ -78,7 +79,7 @@ namespace stream_aligner
             {
                 front=-1;rear=-1;
             }
-            else if(front==CircularArray::size-1)
+            else if(front==CircularArray::capacity-1)
                 front=0;
             else
                 front++;
@@ -110,7 +111,7 @@ namespace stream_aligner
          */
         bool full()
         {
-            if((rear == CircularArray::size-1 && front==0) || front==rear+1)
+            if((rear == CircularArray::capacity-1 && front==0) || front==rear+1)
             {
                 //std::cout<<"\nCircular queue is full";
                 return true;
@@ -118,15 +119,27 @@ namespace stream_aligner
             return false;
         };
 
-        /** @brief capacity
+        /** @brief size
          *
          *
          *  @param void.
-         *  @return temoplate size of the array.
+         *  @return number of elements in the array
          */
-        size_t capacity()
+        size_t size()
         {
-            return CircularArray::size;
+            return data.size();
+        };
+
+        /** @brief max_size
+         *
+         *  maximum number of elements the array is able to hold
+         *
+         *  @param void.
+         *  @return capacity
+         */
+        size_t max_size()
+        {
+            return CircularArray::capacity;
         };
 
         /** @brief clear

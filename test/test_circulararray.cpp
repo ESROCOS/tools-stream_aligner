@@ -13,70 +13,70 @@
 
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array)
 {
-    base::Time time_stamp;
+
+    std::cout<<"\n*** CIRCULAR ARRAY [TEST 1] ***\n";
+
+    base::Time time_stamp, time_start =  base::Time::now();
+    base::Time step = base::Time::fromSeconds(1);
     stream_aligner::CircularArray<> buffer;
 
     BOOST_TEST (buffer.empty());
+    time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.capacity()+1; ++i)
+    for (size_t i = 0; i<buffer.max_size()+1; ++i)
     {
-        time_stamp = base::Time::now();
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.capacity())
+        if (i >= buffer.max_size())
         {
             BOOST_TEST (buffer.full());
-            BOOST_TEST(!buffer.push(time_stamp));
         }
-        else
-        {
-            BOOST_TEST(buffer.push(time_stamp));
-        }
+        buffer.push(time_stamp);
 
-        sleep(1);
+        time_stamp = time_stamp + step;
     }
 
     BOOST_TEST (buffer.full());
-    for (size_t i = 0; i<buffer.capacity()+1; ++i)
+    for (size_t i = 0; i<buffer.max_size()+1; ++i)
     {
         time_stamp = buffer.pop();
         if (time_stamp.isNull())
         {
-            std::cout<<"["<< i <<"]Pop time_stamp is NULL" <<std::endl;
+            BOOST_TEST (buffer.empty());
+            //std::cout<<"["<< i <<"]Pop buffer is empty" <<std::endl;
         }
         else
         {
             BOOST_TEST (!time_stamp.isNull());
-            std::cout<<"["<< i <<"]Pop time_stamp "<<time_stamp.toString()<<std::endl;
+            BOOST_CHECK (time_stamp  == time_start + base::Time::fromSeconds(i+1 * step.toSeconds()));
+            //std::cout<<"["<< i <<"]Pop time_stamp "<<time_stamp.toString()<<std::endl;
         }
     }
 
-    BOOST_TEST (buffer.empty());
 }
 
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
 {
-    base::Time time_stamp;
+    std::cout<<"\n*** CIRCULAR ARRAY [TEST 2] ***\n";
+
+    base::Time time_stamp, time_start =  base::Time::now();
+    base::Time step = base::Time::fromSeconds(1);
     stream_aligner::CircularArray<5> buffer;
 
     BOOST_TEST (buffer.empty());
+    time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.capacity()+1; ++i)
+    for (size_t i = 0; i<buffer.max_size()+1; ++i)
     {
-        time_stamp = base::Time::now();
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.capacity())
+        if (i == buffer.max_size())
         {
             BOOST_TEST (buffer.full());
-            BOOST_TEST(!buffer.push(time_stamp));
         }
-        else
-        {
-            BOOST_TEST(buffer.push(time_stamp));
-        }
+        buffer.push(time_stamp);
 
-        sleep(1);
+        time_stamp = time_stamp + step;
     }
 
     BOOST_TEST (buffer.full());
@@ -86,41 +86,40 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
 
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
 {
-    base::Time time_stamp;
+    std::cout<<"\n*** CIRCULAR ARRAY [TEST 3] ***\n";
+
+    base::Time time_stamp, time_start =  base::Time::now();
+    base::Time step = base::Time::fromSeconds(1);
     stream_aligner::CircularArray<1> buffer;
 
     BOOST_TEST (buffer.empty());
+    time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.capacity()+1; ++i)
+    for (size_t i = 0; i<buffer.max_size()+10; ++i)
     {
-        time_stamp = base::Time::now();
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.capacity())
+        if (i == buffer.max_size())
         {
             BOOST_TEST (buffer.full());
-            BOOST_TEST(!buffer.push(time_stamp));
         }
-        else
-        {
-            BOOST_TEST(buffer.push(time_stamp));
-        }
+        buffer.push(time_stamp);
 
-        sleep(1);
+        time_stamp = time_stamp + step;
     }
 
     BOOST_TEST (buffer.full());
-    for (size_t i = 0; i<buffer.capacity()+1; ++i)
+    for (size_t i = 0; i<buffer.max_size()+1; ++i)
     {
         time_stamp = buffer.pop();
         if (time_stamp.isNull())
         {
-            std::cout<<"["<< i <<"]Pop time_stamp is NULL" <<std::endl;
+            BOOST_TEST (buffer.empty());
         }
         else
         {
             BOOST_TEST (!time_stamp.isNull());
-            std::cout<<"["<< i <<"]Pop time_stamp "<<time_stamp.toString()<<std::endl;
+            BOOST_CHECK (time_stamp  == time_start + base::Time::fromSeconds(i+10 * step.toSeconds()));
         }
     }
 

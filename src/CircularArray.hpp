@@ -14,7 +14,7 @@ namespace stream_aligner
         static const std::size_t capacity = N;
     protected:
         std::array<T, capacity> data;
-        int front,rear;
+        int front_idx, rear_idx;
     public:
         /** @brief Constructor
          *
@@ -40,17 +40,17 @@ namespace stream_aligner
                 this->pop();
             }
 
-            if(rear == -1)
+            if(rear_idx == -1)
             {
-                rear++;
-                front++;
+                rear_idx++;
+                front_idx++;
             }
-            else if(rear==CircularArray::capacity-1)
-                rear=0;
+            else if(rear_idx==CircularArray::capacity-1)
+                rear_idx=0;
             else
-                rear++;
+                rear_idx++;
 
-            data[rear] = ts;
+            data[rear_idx] = ts;
             return;
 
         };
@@ -73,20 +73,54 @@ namespace stream_aligner
                 return ts;
             }
 
-            //std::cout<<data[front]<<" deleted"<<std::endl;
-            ts = data[front];
+            //std::cout<<data[front_idx]<<" deleted"<<std::endl;
+            ts = data[front_idx];
 
-            if(front==rear)
+            if(front_idx==rear_idx)
             {
-                front=-1;rear=-1;
+                front_idx=-1;rear_idx=-1;
             }
-            else if(front==CircularArray::capacity-1)
-                front=0;
+            else if(front_idx==CircularArray::capacity-1)
+                front_idx=0;
             else
-                front++;
+                front_idx++;
 
             return ts;
         };
+
+        /** @brief front
+         *
+         * It gives the first element without
+         * removing it from the array
+         *
+         *  @param void.
+         *  @return the first element
+         */
+        T front()
+        {
+            if(!this->empty())
+            {
+                return data[front_idx];
+            }
+            return base::NaN<T>();
+        }
+
+        /** @brief back
+         *
+         * It gives the last element without
+         * removing it from the array
+         *
+         *  @param void.
+         *  @return the last element
+         */
+        T back()
+        {
+            if(!this->empty())
+            {
+                return data[rear_idx];
+            }
+            return base::NaN<T>();
+        }
 
         /** @brief array empty
          *
@@ -96,7 +130,7 @@ namespace stream_aligner
          */
         bool empty()
         {
-            if(front==-1)
+            if(front_idx==-1)
             {
                 //std::cout<<"\n Circular Queue is empty";
                 return true;
@@ -110,9 +144,9 @@ namespace stream_aligner
          *  @param void.
          *  @return true if array is full. false otherwise.
          */
-        bool full()
+        bool full() const
         {
-            if((rear == CircularArray::capacity-1 && front==0) || front==rear+1)
+            if((rear_idx == CircularArray::capacity-1 && front_idx==0) || front_idx==rear_idx+1)
             {
                 //std::cout<<"\nCircular queue is full";
                 return true;
@@ -151,7 +185,7 @@ namespace stream_aligner
          */
         void clear()
         {
-            front=-1;rear=-1;
+            front_idx=-1;rear_idx=-1;
         };
 
     };

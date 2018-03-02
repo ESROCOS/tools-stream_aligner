@@ -2,11 +2,39 @@
 #define STREAM_ALIGNER_CIRCULAR_ARRAY_HPP
 
 #include <array>
+#include <iostream>
 #include <base/Float.hpp>
 #include <base/Time.hpp>
 
 namespace stream_aligner
 {
+    template< class I >
+    class cyclic_iterator
+    {
+        I* it, beg, end;
+    public:
+        cyclic_iterator( I* f, I* l )
+            : it( f ), beg( f ), end( l ) {}
+        cyclic_iterator() : it(), beg(), end(){}
+
+        cyclic_iterator &operator++() {
+            ++ it;
+            if ( it == end ) {
+                it = beg;
+            }
+        } // etc for --, post-operations
+
+        friend bool operator==
+            ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
+            { return lhs.it == rhs.it; }
+
+        friend bool operator!=
+            ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
+            { return lhs.it != rhs.it; }
+
+        I& operator*(){ return *it; }
+    };
+
     template <class T = base::Time, size_t N = 10>
     class CircularArray
     {
@@ -15,6 +43,10 @@ namespace stream_aligner
     protected:
         std::array<T, capacity> data;
         int front_idx, rear_idx;
+
+    public:
+       // typedef cyclic_iterator<T> cyclic_iterator;
+
     public:
         /** @brief Constructor
          *
@@ -96,7 +128,7 @@ namespace stream_aligner
          *  @param void.
          *  @return the first element
          */
-        T front()
+        T front() const
         {
             if(!this->empty())
             {
@@ -104,6 +136,8 @@ namespace stream_aligner
             }
             return base::NaN<T>();
         }
+
+        T* begin (){return std::__addressof(data[front_idx]);}
 
         /** @brief back
          *
@@ -113,7 +147,7 @@ namespace stream_aligner
          *  @param void.
          *  @return the last element
          */
-        T back()
+        T back() const
         {
             if(!this->empty())
             {
@@ -122,13 +156,15 @@ namespace stream_aligner
             return base::NaN<T>();
         }
 
+        T* end (){return std::__addressof(data[rear_idx]);}
+
         /** @brief array empty
          *
          *
          *  @param void.
          *  @return true if array is empty. false otherwise.
          */
-        bool empty()
+        bool empty() const
         {
             if(front_idx==-1)
             {
@@ -160,7 +196,7 @@ namespace stream_aligner
          *  @param void.
          *  @return number of elements in the array
          */
-        size_t size()
+        size_t size() const
         {
             return data.size();
         };
@@ -172,7 +208,7 @@ namespace stream_aligner
          *  @param void.
          *  @return capacity
          */
-        size_t max_size()
+        size_t max_size() const
         {
             return CircularArray::capacity;
         };

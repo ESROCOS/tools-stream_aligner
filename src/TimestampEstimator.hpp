@@ -25,6 +25,48 @@ namespace stream_aligner
         */
         double last_time; //m_last
 
+        /** The latency, i.e. the fixed (or, more accurately, slow drifting)
+        * difference between the incoming timestamps and the actual timestamps
+        *
+        * An apriori value for it can be provided to the constructor, and it
+        * will be updated if updateReference is used (i.e. external timestamps
+        * are available).
+        *
+        * It is used as:
+        *
+        * <code>
+        * actual_timestamp = incoming_timestamp - latency
+        * </code>
+        */
+        double latency;
+
+        /** The raw latency, i.e. the unprocessed difference between the
+        * estimator's last estimated time and last received reference time
+        */
+        double latency_raw;
+
+	    /** the value of the last index given to us using update */
+	    int64_t last_index;
+
+	    /** m_last_index is initialized */
+	    bool have_last_index;
+
+        /** The last time given to updateReference */
+        base::Time last_reference;
+
+        /** The count of samples that are expected to be lost within
+        * expected_loss_timeout calls to update().
+        */
+        int expected_losses;
+
+        /** The cumulative count of samples that are lost
+         */
+        int cumulative_expected_losses;
+
+        /** Count of cycles during which expected_losses is expected to be
+        * valid
+        */
+        int expected_loss_timeout;
 
         /** Initial values **/
         TimestampConfig configuration;
@@ -53,6 +95,9 @@ namespace stream_aligner
         */
         base::Time update(base::Time ts, int64_t index);
 
+        /** Updates the estimate for a known lost sample */
+        void updateLoss();
+
         /** The currently estimated period
          * @return the period in case the buffer
          * is full or the configuration period otherwise
@@ -75,11 +120,13 @@ namespace stream_aligner
          * **/
         TimestampStatus getStatus() const;
 
-
-
-
     protected:
-        bool push (const double time);
+        /** Set the base time to the given value. reset_time is used in update()
+         * to trigger new updates when necessary
+         */
+        void resetBaseTime(double new_value, double reset_time);
+
+
 
     };
 }

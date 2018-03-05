@@ -16,14 +16,14 @@ namespace stream_aligner
         *
         * It gets added back when returning from update() and updateReference()
         */
-        base::Time start_time;
+        base::Time start_time; //m_zero
 
         /** The last estimated timestamp, without latency
         *
         * The current best estimate for the next sample, with no new
         * information, is always last_time + getPeriod() - latency
         */
-        double last_time;
+        double last_time; //m_last
 
 
         /** Initial values **/
@@ -39,6 +39,11 @@ namespace stream_aligner
         /** Constructor
          * **/
         TimestampEstimator(TimestampConfig &initial_config);
+
+        /** Resets this estimator to an initial state, reusing the same
+         * parameters
+         */
+        void reset(TimestampConfig &reset_config);
 
         /** Updates the estimate and return the actual timestamp for +ts+ */
         base::Time update(base::Time ts);

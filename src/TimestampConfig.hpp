@@ -9,6 +9,9 @@ namespace stream_aligner
     {
         base::Time period;
         base::Time latency;
+        TimestampConfig(){};
+        TimestampConfig(base::Time _period, base::Time _latency):
+            period(_period), latency(_latency){};
     };
 }
 

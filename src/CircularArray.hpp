@@ -39,9 +39,9 @@ namespace stream_aligner
     class CircularArray
     {
     private:
-        static const std::size_t capacity = N;
+        static const std::size_t max_size = N;
     protected:
-        std::array<T, capacity> data;
+        std::array<T, max_size> data;
         int front_idx, rear_idx;
 
     public:
@@ -77,7 +77,7 @@ namespace stream_aligner
                 rear_idx++;
                 front_idx++;
             }
-            else if(rear_idx==CircularArray::capacity-1)
+            else if(rear_idx==CircularArray::max_size-1)
                 rear_idx=0;
             else
                 rear_idx++;
@@ -112,7 +112,7 @@ namespace stream_aligner
             {
                 front_idx=-1;rear_idx=-1;
             }
-            else if(front_idx==CircularArray::capacity-1)
+            else if(front_idx==CircularArray::max_size-1)
                 front_idx=0;
             else
                 front_idx++;
@@ -182,7 +182,7 @@ namespace stream_aligner
          */
         bool full() const
         {
-            if((rear_idx == CircularArray::capacity-1 && front_idx==0) || front_idx==rear_idx+1)
+            if((rear_idx == CircularArray::max_size-1 && front_idx==0) || front_idx==rear_idx+1)
             {
                 //std::cout<<"\nCircular queue is full";
                 return true;
@@ -198,19 +198,26 @@ namespace stream_aligner
          */
         size_t size() const
         {
-            return data.size();
+            if (empty())
+            {
+                return 0;
+            }
+            else
+            {
+                return 1 + (CircularArray::max_size - front_idx + rear_idx)%CircularArray::max_size;
+            }
         };
 
-        /** @brief max_size
+        /** @brief capacity
          *
          *  maximum number of elements the array is able to hold
          *
          *  @param void.
          *  @return capacity
          */
-        size_t max_size() const
+        size_t capacity() const
         {
-            return CircularArray::capacity;
+            return CircularArray::max_size;
         };
 
         /** @brief clear

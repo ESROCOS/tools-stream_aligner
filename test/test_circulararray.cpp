@@ -21,28 +21,35 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array)
     stream_aligner::CircularArray<> buffer;
 
     BOOST_TEST (buffer.empty());
+    BOOST_CHECK(buffer.size() == 0);
     time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i >= buffer.max_size())
+        if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
+        }
+        else
+        {
+            BOOST_CHECK(buffer.size() == i);
         }
         buffer.push(time_stamp);
 
         time_stamp = time_stamp + step;
+        std::cout<<"buffer.size():"<<buffer.size()<<"\n";
     }
 
     BOOST_TEST (buffer.full());
+    BOOST_CHECK(buffer.size() == buffer.capacity());
     BOOST_CHECK (buffer.front()  == time_start + base::Time::fromSeconds(step.toSeconds()));
-    BOOST_CHECK (buffer.back()  == time_start + base::Time::fromSeconds(buffer.max_size() * step.toSeconds()));
+    BOOST_CHECK (buffer.back()  == time_start + base::Time::fromSeconds(buffer.capacity() * step.toSeconds()));
     BOOST_CHECK(*(buffer.begin()) == buffer.front());
     BOOST_CHECK(*buffer.end() == buffer.back());
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         time_stamp = buffer.pop();
         if (time_stamp.isNull())
@@ -70,11 +77,11 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
     BOOST_TEST (buffer.empty());
     time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.max_size())
+        if (i == buffer.capacity())
         {
             BOOST_TEST (buffer.full());
         }
@@ -84,7 +91,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
     }
 
     BOOST_CHECK (buffer.front()  == time_start + base::Time::fromSeconds(step.toSeconds()));
-    BOOST_CHECK (buffer.back()  == time_start + base::Time::fromSeconds(buffer.max_size() * step.toSeconds()));
+    BOOST_CHECK (buffer.back()  == time_start + base::Time::fromSeconds(buffer.capacity() * step.toSeconds()));
 
 
     BOOST_TEST (buffer.full());
@@ -103,11 +110,11 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
     BOOST_TEST (buffer.empty());
     time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.max_size()+buffer.max_size(); ++i)
+    for (size_t i = 0; i<buffer.capacity()+buffer.capacity(); ++i)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.max_size())
+        if (i == buffer.capacity())
         {
             BOOST_TEST (buffer.full());
         }
@@ -117,11 +124,11 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
     }
 
     BOOST_TEST (buffer.full());
-    BOOST_CHECK (buffer.front()  == time_start + base::Time::fromSeconds(buffer.max_size() * step.toSeconds()));
-    BOOST_CHECK (buffer.back()  == time_start + base::Time::fromSeconds(2*buffer.max_size()-1 * step.toSeconds()));
+    BOOST_CHECK (buffer.front()  == time_start + base::Time::fromSeconds(buffer.capacity() * step.toSeconds()));
+    BOOST_CHECK (buffer.back()  == time_start + base::Time::fromSeconds(2*buffer.capacity()-1 * step.toSeconds()));
 
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         time_stamp = buffer.pop();
         if (time_stamp.isNull())
@@ -131,7 +138,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
         else
         {
             BOOST_TEST (!time_stamp.isNull());
-            BOOST_CHECK (time_stamp  == time_start + base::Time::fromSeconds(i+buffer.max_size() * step.toSeconds()));
+            BOOST_CHECK (time_stamp  == time_start + base::Time::fromSeconds(i+buffer.capacity() * step.toSeconds()));
         }
     }
 
@@ -150,11 +157,11 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_double)
     BOOST_TEST (buffer.empty());
     time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i >= buffer.max_size())
+        if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
         }
@@ -165,9 +172,9 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_double)
 
     BOOST_TEST (buffer.full());
     BOOST_CHECK (base::Time::fromSeconds(buffer.front())  == time_start + base::Time::fromSeconds(step.toSeconds()));
-    BOOST_CHECK (base::Time::fromSeconds(buffer.back())  == time_start + base::Time::fromSeconds(buffer.max_size() * step.toSeconds()));
+    BOOST_CHECK (base::Time::fromSeconds(buffer.back())  == time_start + base::Time::fromSeconds(buffer.capacity() * step.toSeconds()));
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         time_stamp = base::Time::fromSeconds(buffer.pop());
         if (time_stamp.toSeconds() < 0.00)
@@ -194,11 +201,11 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_int64t)
     BOOST_TEST (buffer.empty());
     time_stamp = time_start;
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i >= buffer.max_size())
+        if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
         }
@@ -209,9 +216,9 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_int64t)
 
     BOOST_TEST (buffer.full());
     BOOST_CHECK (base::Time::fromMicroseconds(buffer.front())  == time_start + base::Time::fromSeconds(step.toSeconds()));
-    BOOST_CHECK (base::Time::fromMicroseconds(buffer.back())  == time_start + base::Time::fromSeconds(buffer.max_size() * step.toSeconds()));
+    BOOST_CHECK (base::Time::fromMicroseconds(buffer.back())  == time_start + base::Time::fromSeconds(buffer.capacity() * step.toSeconds()));
 
-    for (size_t i = 0; i<buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<buffer.capacity()+1; ++i)
     {
         if (!buffer.empty())
         {
@@ -233,7 +240,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_iterator)
 
     BOOST_TEST (buffer.empty());
 
-    for (size_t i = 0; i<2*buffer.max_size()+1; ++i)
+    for (size_t i = 0; i<2*buffer.capacity()+1; ++i)
     {
         buffer.push(i);
         std::cout<<"["<< i <<"]Push time_stamp "<<i<<std::endl;
@@ -241,7 +248,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_iterator)
 
     std::cout<<"FRONT: "<<buffer.front()<<std::endl;
     std::cout<<"BEGIN: "<<*buffer.begin()<<std::endl;
-    /*for (size_t i = 0; i<buffer.max_size(); ++i)
+    /*for (size_t i = 0; i<buffer.capacity(); ++i)
     {
         std::cout<<"["<< i <<"]Pop time_stamp "<<buffer.pop()<<std::endl;
     }*/

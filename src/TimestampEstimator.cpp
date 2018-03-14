@@ -9,17 +9,23 @@ TimestampEstimator::TimestampEstimator(TimestampConfig &initial_config)
 
 void TimestampEstimator::reset(TimestampConfig &reset_config)
 {
-    samples.clear();
-
-    this->configuration = reset_config;
     this->start_time = base::Time();
+    this->window = this->samples.capacity() * this->configuration.period.toSeconds();
     this->last_time = 0;
+    this->latency = reset_config.latency.toSeconds();
+    this->latency_raw = latency;
+    this->missing_samples_total = 0;
+    this->missing_samples = 0;
     this->last_index = 0;
     this->have_last_index = false;
     this->last_reference = base::Time();
     this->expected_losses = 0;
     this->cumulative_expected_losses = 0;
     this->expected_loss_timeout = 0;
+    this->base_time_reset = 0;
+    this->base_time_reset_offset = 0;
+    this->configuration = reset_config;
+    this->samples.clear();
 }
 
 
@@ -36,13 +42,15 @@ base::Time TimestampEstimator::update(base::Time ts)
 
     if (this->samples.empty())
     {
-        // reset base Time
+        this->resetBaseTime(current, current);
+        this->samples.push(current);
+        return base::Time::fromSeconds(this->last_time - this->latency) + this->start_time;
     }
 
     this->samples.push(current);
 
     // Recompute the period
-    double period = getPeriod().toSeconds();
+    double period = this->getPeriod().toSeconds();
 
     /** Check for lost samples
 
@@ -80,12 +88,25 @@ base::Time TimestampEstimator::update(base::Time ts)
         }
     }
 
-    /** m_last is tracking the current base time, i.e. the best estimate for the
-    next sample is always m_last + period
+    if (lost_count > 0)
+    {
+        this->samples.pop();
+        for (int i = 0; i < lost_count; ++i)
+        {
+            this->missing_samples++;
+            this->missing_samples_total++;
+            this->samples.push(base::unset<double>());
+            this->last_time += period;
+        }
+        this->samples.push(current);
+    }
+
+    /** last_time is tracking the current base time, i.e. the best estimate for the
+    next sample is always this->last_time + period
 
     If this condition is true, it means that the current time stream is
-    actually too late (we are receiving a sample that is earlier than m_last
-    + period). We therefore need to update m_last to reflect that fact.
+    actually too late (we are receiving a sample that is earlier than this->last_time
+    + period). We therefore need to update this->last_time to reflect that fact.
 
     To avoid resetting the base time unnecessarily, consider that we
     "reset" it as soon as we are within 1e-4 of it.
@@ -124,12 +145,41 @@ void TimestampEstimator::updateLoss()
     this->expected_loss_timeout = 5;
 }
 
+void TimestampEstimator::updateReference(base::Time ts)
+{
+    if (!this->samples.full())
+        return;
+
+    double period = this->getPeriod().toSeconds();
+    double hw_time   = (ts - this->start_time).toSeconds();
+
+    // Compute first the fractional part of the latency
+    //
+    // Note that floor returns the integer that is smaller or equal to its
+    // argument, so it works regardless of this->last_time <=> hw_time
+    double diff_int = floor((this->last_time - hw_time) / period);
+    double diff = this->last_time - (hw_time + diff_int * period);
+
+    // Get the integral part of the latency from the current m_latency value
+    double latency_int = floor(this->latency / period);
+
+    this->latency = latency_int * period + diff;
+    this->last_reference = ts;
+}
+
+int TimestampEstimator::getLostSampleCount() const
+{
+    return this->missing_samples_total;
+}
+
+
 base::Time TimestampEstimator::getPeriod() const
 {
-    if (!this->samples.full() && this->configuration.period.toSeconds())
+    if (this->samples.empty())
     {
         return this->configuration.period;
     }
+
     else
     {
         double latest = samples.back();
@@ -143,16 +193,16 @@ base::Time TimestampEstimator::getPeriod() const
         {
             return this->configuration.period;
         }
-        return base::Time::fromSeconds((latest - earliest) / samples.size()-1);
+        return base::Time::fromSeconds((latest - earliest) / static_cast<double>(samples.size()-1.0));
     }
 }
 
 void TimestampEstimator::resetBaseTime(double new_value, double reset_time)
 {
     if (this->last_time != 0)
-        m_base_time_reset_offset = new_value - m_last;
+        this->base_time_reset_offset = new_value - this->last_time;
     this->last_time = new_value;
-    m_base_time_reset = reset_time;
+    this->base_time_reset = reset_time;
     if (!this->last_reference.isNull())
         updateReference(this->last_reference);
 }

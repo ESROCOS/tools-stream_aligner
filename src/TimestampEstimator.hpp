@@ -18,6 +18,9 @@ namespace stream_aligner
         */
         base::Time start_time; //m_zero
 
+        /** TimestampEstimator window in seconds */
+        double window;
+
         /** The last estimated timestamp, without latency
         *
         * The current best estimate for the next sample, with no new
@@ -45,10 +48,16 @@ namespace stream_aligner
         */
         double latency_raw;
 
+        /** Total number of missing samples */
+	    int missing_samples_total;
+
+	    /** number of missing samples recorded in samples array */
+	    unsigned int missing_samples;
+
 	    /** the value of the last index given to us using update */
 	    int64_t last_index;
 
-	    /** m_last_index is initialized */
+	    /** last_index is initialized */
 	    bool have_last_index;
 
         /** The last time given to updateReference */
@@ -68,6 +77,21 @@ namespace stream_aligner
         */
         int expected_loss_timeout;
 
+        /** During the estimation, we keep track of when we encounter an actual
+         * sample that matches the current estimated base time.
+         *
+         * If we don't encounter one in a whole estimation window, we assume
+         * that something is wrong and that we should reset it completely
+         */
+        double base_time_reset;
+
+        /** The offset between the last base time and the new base time at the
+         * last call to resetBaseTime 
+         *
+         * Used for statistics / monitoring purposes only
+         */
+        double base_time_reset_offset;
+
         /** Initial values **/
         TimestampConfig configuration;
 
@@ -75,7 +99,7 @@ namespace stream_aligner
         TimestampStatus status;
 
         /** The buffer of samples **/
-        CircularArray<double> samples;
+        CircularArray<double, 10> samples;
 
     public:
         /** Constructor
@@ -97,6 +121,12 @@ namespace stream_aligner
 
         /** Updates the estimate for a known lost sample */
         void updateLoss();
+
+        /** Updates the estimate using a reference */
+        void updateReference(base::Time ts);
+
+        /** The total estimated count of lost samples so far */
+        int getLostSampleCount() const;
 
         /** The currently estimated period
          * @return the period in case the buffer

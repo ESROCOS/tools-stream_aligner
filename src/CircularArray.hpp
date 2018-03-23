@@ -107,7 +107,7 @@ namespace stream_aligner
             return base::NaN<T>();
         }
 
-        /** begin()
+        /** begin
          *
          * Pointer to the first element (front_idx)
          *
@@ -115,7 +115,7 @@ namespace stream_aligner
          */
         T* begin (){return std::__addressof(data[front_idx]);}
 
-        /* xbegin()
+        /* xbegin
          *
          * Pointer to the first block in memory
          *
@@ -140,7 +140,7 @@ namespace stream_aligner
             return base::NaN<T>();
         }
 
-        /** end()
+        /** end
          *
          * Pointer to the past-the-end element (next element to rear_idx)
          * The past-the-end element is the theoretical element that would follow
@@ -162,7 +162,7 @@ namespace stream_aligner
         }
 
 
-        /** xend()
+        /** xend
          *
          * Pointer to the last memory block in the array
          *
@@ -244,6 +244,12 @@ namespace stream_aligner
         };
     };
 
+    /** @brief cyclic_iterator
+     *
+     *  this is the circular array iterator
+     *
+     */
+
     template< typename I >
     class cyclic_iterator
     {
@@ -252,9 +258,11 @@ namespace stream_aligner
         I* last;
         I* xlast;
     public:
+        /** constructor **/
         cyclic_iterator( CircularArray<I>& b )
             : it(b.begin()), xstart(b.xbegin()), last(b.end()), xlast(b.xend()) {}
 
+        /** increment operator **/
         cyclic_iterator &operator++()
         {
             ++it;
@@ -264,16 +272,36 @@ namespace stream_aligner
             }
         }
 
+        /** equal bolean operator **/
         friend bool operator==
             ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
             { return lhs.it == rhs.it; }
 
+        /** diferent boolena operator **/
         friend bool operator!=
             ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
             { return lhs.it != rhs.it; }
 
+        /** contemt operator **/
         I& operator*(){ return *it; }
+
+        /** itx
+         *
+         * get element
+         *
+         * @return pointer to the current element
+         * */
         I* itx(){ return this->it; }
+
+         /** end
+         *
+         * Pointer to the past-the-end element (next element to rear_idx)
+         * The past-the-end element is the theoretical element that would follow
+         * the last element in the array. It does not point to any element, and
+         * thus shall not be dereferenced.
+         *
+         * @return pointer to the past-the-end element
+         */
         I* end(){ return this->last; }
     };
 

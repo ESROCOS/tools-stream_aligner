@@ -8,33 +8,6 @@
 
 namespace stream_aligner
 {
-    template< class I >
-    class cyclic_iterator
-    {
-        I* it, beg, end;
-    public:
-        cyclic_iterator( I* f, I* l )
-            : it( f ), beg( f ), end( l ) {}
-        cyclic_iterator() : it(), beg(), end(){}
-
-        cyclic_iterator &operator++() {
-            ++ it;
-            if ( it == end ) {
-                it = beg;
-            }
-        } // etc for --, post-operations
-
-        friend bool operator==
-            ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
-            { return lhs.it == rhs.it; }
-
-        friend bool operator!=
-            ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
-            { return lhs.it != rhs.it; }
-
-        I& operator*(){ return *it; }
-    };
-
     template <class T = base::Time, size_t N = 10>
     class CircularArray
     {
@@ -43,9 +16,6 @@ namespace stream_aligner
     protected:
         std::array<T, max_size> data;
         int front_idx, rear_idx;
-
-    public:
-       // typedef cyclic_iterator<T> cyclic_iterator;
 
     public:
         /** @brief Constructor
@@ -137,7 +107,21 @@ namespace stream_aligner
             return base::NaN<T>();
         }
 
+        /** begin()
+         *
+         * Pointer to the first element (front_idx)
+         *
+         * @return pointer to the last element
+         */
         T* begin (){return std::__addressof(data[front_idx]);}
+
+        /* xbegin()
+         *
+         * Pointer to the first block in memory
+         *
+         * @return pointer to data[0]
+         */
+        T* xbegin (){return std::__addressof(data[0]);}
 
         /** @brief back
          *
@@ -156,7 +140,35 @@ namespace stream_aligner
             return base::NaN<T>();
         }
 
-        T* end (){return std::__addressof(data[rear_idx]);}
+        /** end()
+         *
+         * Pointer to the past-the-end element (next element to rear_idx)
+         * The past-the-end element is the theoretical element that would follow
+         * the last element in the array. It does not point to any element, and
+         * thus shall not be dereferenced.
+         *
+         * @return pointer to the past-the-end element
+         */
+        T* end ()
+        {
+            if(rear_idx==CircularArray::max_size-1 || rear_idx == -1)
+            {
+                return std::__addressof(data[0]);
+            }
+            else
+            {
+                return std::__addressof(data[rear_idx+1]);
+            }
+        }
+
+
+        /** xend()
+         *
+         * Pointer to the last memory block in the array
+         *
+         * @return pointer to data[N-1]
+         */
+        T* xend (){return std::__addressof(data[CircularArray::max_size-1]);}
 
         /** @brief array empty
          *
@@ -230,8 +242,42 @@ namespace stream_aligner
         {
             front_idx=-1;rear_idx=-1;
         };
-
     };
+
+    template< typename I >
+    class cyclic_iterator
+    {
+        I* it;
+        I *xstart;
+        I* last;
+        I* xlast;
+    public:
+        cyclic_iterator( CircularArray<I>& b )
+            : it(b.begin()), xstart(b.xbegin()), last(b.end()), xlast(b.xend()) {}
+
+        cyclic_iterator &operator++()
+        {
+            ++it;
+            if ( it == xlast+1 )
+            {
+                it = xstart;
+            }
+        }
+
+        friend bool operator==
+            ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
+            { return lhs.it == rhs.it; }
+
+        friend bool operator!=
+            ( cyclic_iterator const &lhs, cyclic_iterator const &rhs )
+            { return lhs.it != rhs.it; }
+
+        I& operator*(){ return *it; }
+        I* itx(){ return this->it; }
+        I* end(){ return this->last; }
+    };
+
+
 }
 #endif
 

@@ -82,15 +82,16 @@ public:
         if (nr > 0)
             sample_latency_max_noise = this->sample_latency_max_noise;
         else
-            sample_latency_max_noise = real_period * 0.09;
-        base::Time sample_latencyNoise = base::Time::fromSeconds(drand48() * sample_latency_max_noise.toSeconds());
+            sample_latency_max_noise = this->real_period * 0.09;
 
-	    base::Time hw_time_noise(base::Time::fromSeconds(drand48() * hw_time_max_noise.toSeconds()));
+        base::Time sample_latency_noise = base::Time::fromSeconds(drand48() * this->sample_latency_max_noise.toSeconds());
 
-        actual_period = real_period + period_drift * nr;
-    	real_time   = base_time + real_period * nr + period_drift * nr * (nr + 1) / 2;
-    	sample_time = real_time + sample_latency + sample_latencyNoise;
-    	hw_time     = real_time + hw_time_noise;
+	    base::Time hw_time_noise(base::Time::fromSeconds(drand48() * this->hw_time_max_noise.toSeconds()));
+
+        this->actual_period = this->real_period + this->period_drift * nr;
+        this->real_time = this->base_time + this->real_period * nr + this->period_drift * nr * (nr + 1) / 2;
+        this->sample_time = this->real_time + this->sample_latency + sample_latency_noise;
+        this->hw_time = this->real_time + hw_time_noise;
     }
 
     void addResultToPlot(base::Time estimated_time, base::Time estimated_period)
@@ -116,7 +117,13 @@ public:
     void checkResult(base::Time estimated_time, base::Time estimated_period)
     {
         addResultToPlot(estimated_time, estimated_period);
-        BOOST_CHECK_SMALL((estimated_time - real_time).toSeconds(), actual_period.toSeconds() / 10);
+
+        if ((std::abs((estimated_time - real_time).toSeconds()) > actual_period.toSeconds() / 10))
+        {
+            std::cout<<"estimated time: "<<estimated_time.toString()<<" real time: "<<real_time.toString()<<"\n";
+        }
+
+        BOOST_CHECK_SMALL(std::abs((estimated_time - real_time).toSeconds()), actual_period.toSeconds() / 10);
     }
 };
 
@@ -177,9 +184,11 @@ void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has
     stream_aligner::TimestampConfig config(base::Time::fromSeconds(20), initial_period);
     stream_aligner::TimestampEstimator estimator(config);
 
+    std::cout<<"== START == "<<estimator.getStatus()<<"\n";
+
     for (int i = 0; i < COUNT; ++i)
     {
-	data.calculateSamples(i);
+	    data.calculateSamples(i);
 
         if (hardware_order < 0)
             estimator.updateReference(data.hw_time);
@@ -200,15 +209,14 @@ void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has
         if (hardware_order > 0)
             estimator.updateReference(data.hw_time);
 
-        base::Time period;
-        //if (estimator.haveEstimate())
-        period = estimator.getPeriod();
+        base::Time period = estimator.getPeriod();
 
         if (i < init)
             data.addResultToPlot(estimated_time, period);
         else
             data.checkResult(estimated_time, period);
     }
+    std::cout<<"== END == "<<estimator.getStatus()<<"\n";
 };
 
 
@@ -229,8 +237,14 @@ BOOST_AUTO_TEST_CASE(test_perfect_stream)
 
     std::cout<<"estimated period:" <<estimator.getPeriod().toSeconds() <<"\n";
     BOOST_REQUIRE_CLOSE(step.toSeconds(), estimator.getPeriod().toSeconds(), 1e-6);
+
+    std::cout<< estimator.getStatus() <<std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(test_timestamper__plain)
 { test_timestamper_impl(0, false, false, 1000, 0); }
+
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period)
+{ test_timestamper_impl(-1, true, false, 0, 0); }
+
 

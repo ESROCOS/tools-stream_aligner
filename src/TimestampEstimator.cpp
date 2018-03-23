@@ -10,7 +10,6 @@ TimestampEstimator::TimestampEstimator(TimestampConfig &initial_config)
 void TimestampEstimator::reset(TimestampConfig &reset_config)
 {
     this->start_time = base::Time();
-    this->window = this->samples.capacity() * this->configuration.period.toSeconds();
     this->last_time = 0;
     this->latency = reset_config.latency.toSeconds();
     this->latency_raw = latency;
@@ -153,14 +152,14 @@ void TimestampEstimator::updateReference(base::Time ts)
     double period = this->getPeriod().toSeconds();
     double hw_time   = (ts - this->start_time).toSeconds();
 
-    // Compute first the fractional part of the latency
-    //
-    // Note that floor returns the integer that is smaller or equal to its
-    // argument, so it works regardless of this->last_time <=> hw_time
+    /* Compute first the fractional part of the latency
+    Note that floor returns the integer that is smaller or equal to its
+    argument, so it works regardless of this->last_time <=> hw_time **/
     double diff_int = floor((this->last_time - hw_time) / period);
     double diff = this->last_time - (hw_time + diff_int * period);
 
-    // Get the integral part of the latency from the current m_latency value
+    /** Get the integral part of the latency from the current m_latency value
+     * **/
     double latency_int = floor(this->latency / period);
 
     this->latency = latency_int * period + diff;
@@ -197,6 +196,40 @@ base::Time TimestampEstimator::getPeriod() const
     }
 }
 
+base::Time TimestampEstimator::getLatency() const
+{
+    return base::Time::fromSeconds(this->latency);
+}
+
+
+TimestampStatus TimestampEstimator::getStatus() const
+{
+    /** Current status values **/
+    TimestampStatus status;
+
+    status.stamp = base::Time::fromSeconds(this->last_time - this->latency) + this->start_time;
+    status.period = this->getPeriod();
+    status.latency = this->getLatency();
+    status.window = this->samples.capacity();
+    status.lost_samples = this->missing_samples;
+    status.lost_samples_total = this->missing_samples_total;
+    status.base_time = base::Time::fromSeconds(this->base_time_reset) + this->start_time;
+    status.base_time_reset_offset = base::Time::fromSeconds(this->base_time_reset_offset);
+
+    if (this->samples.empty())
+    {
+        status.time_raw = base::Time();
+    }
+    else
+    {
+      status.time_raw = base::Time::fromSeconds(this->samples.back()) + this->start_time;
+    }
+
+    status.reference_time_raw = this->last_reference;
+
+    return status;
+}
+
 void TimestampEstimator::resetBaseTime(double new_value, double reset_time)
 {
     if (this->last_time != 0)
@@ -207,8 +240,3 @@ void TimestampEstimator::resetBaseTime(double new_value, double reset_time)
         updateReference(this->last_reference);
 }
 
-
-TimestampStatus TimestampEstimator::getStatus() const
-{
-    return this->status;
-}

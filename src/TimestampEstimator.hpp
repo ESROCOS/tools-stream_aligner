@@ -11,15 +11,15 @@ namespace stream_aligner
     {
 
     protected:
+        static const size_t  BUFFER_SIZE = 20;
+
+    protected:
         /** To avoid loss of precision while manipulating doubles, we move all
         * times to be relative to this time
         *
         * It gets added back when returning from update() and updateReference()
         */
         base::Time start_time; //m_zero
-
-        /** TimestampEstimator window in seconds */
-        double window;
 
         /** The last estimated timestamp, without latency
         *
@@ -48,11 +48,11 @@ namespace stream_aligner
         */
         double latency_raw;
 
-        /** Total number of missing samples */
-	    int missing_samples_total;
-
 	    /** number of missing samples recorded in samples array */
 	    unsigned int missing_samples;
+
+        /** Total number of missing samples */
+	    int missing_samples_total;
 
 	    /** the value of the last index given to us using update */
 	    int64_t last_index;
@@ -95,11 +95,8 @@ namespace stream_aligner
         /** Initial values **/
         TimestampConfig configuration;
 
-        /** Current status values **/
-        TimestampStatus status;
-
         /** The buffer of samples **/
-        CircularArray<double, 10> samples;
+        CircularArray<double, BUFFER_SIZE> samples;
 
     public:
         /** Constructor
@@ -138,12 +135,6 @@ namespace stream_aligner
          * updateReference() is called
          */
         base::Time getLatency() const;
-
-        /** Returns the maximum jitter duration estimated so far
-         *
-         * It is reset to zero only on reset
-         */
-        base::Time getMaxJitter() const;
 
         /** The current status
          * @return the status

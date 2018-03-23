@@ -31,6 +31,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array)
         if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
+            BOOST_CHECK(buffer.size() == buffer.capacity());
         }
         else
         {
@@ -81,9 +82,14 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.capacity())
+        if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
+            BOOST_CHECK(buffer.size() == buffer.capacity());
+        }
+        else
+        {
+            BOOST_CHECK(buffer.size() == i);
         }
         buffer.push(time_stamp);
 
@@ -97,6 +103,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_5)
     BOOST_TEST (buffer.full());
     buffer.clear();
     BOOST_TEST (buffer.empty());
+    BOOST_CHECK(buffer.size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
@@ -114,9 +121,14 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
     {
         std::cout<<"["<< i <<"]Push time_stamp "<<time_stamp.toString()<<std::endl;
 
-        if (i == buffer.capacity())
+        if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
+            BOOST_CHECK(buffer.size() == buffer.capacity());
+        }
+        else
+        {
+            BOOST_CHECK(buffer.size() == i);
         }
         buffer.push(time_stamp);
 
@@ -143,6 +155,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_of_size_1)
     }
 
     BOOST_TEST (buffer.empty());
+    BOOST_CHECK(buffer.size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_double)
@@ -164,6 +177,10 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_double)
         if (i >= buffer.capacity())
         {
             BOOST_TEST (buffer.full());
+        }
+        else
+        {
+            BOOST_CHECK(buffer.size() == i);
         }
         buffer.push(time_stamp.toSeconds());
 
@@ -187,6 +204,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_double)
             BOOST_CHECK (time_stamp  == time_start + base::Time::fromSeconds(i+1 * step.toSeconds()));
         }
     }
+    BOOST_CHECK(buffer.size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_int64t)
@@ -209,6 +227,10 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_int64t)
         {
             BOOST_TEST (buffer.full());
         }
+        else
+        {
+            BOOST_CHECK(buffer.size() == i);
+        }
         buffer.push(time_stamp.toMicroseconds());
 
         time_stamp = time_stamp + step;
@@ -228,6 +250,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_type_int64t)
         }
     }
     BOOST_TEST (buffer.empty());
+    BOOST_CHECK(buffer.size() == 0);
 }
 
 

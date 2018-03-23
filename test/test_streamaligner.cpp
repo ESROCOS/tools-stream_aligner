@@ -9,3 +9,7 @@
 #include <boost/test/execution_monitor.hpp>  
 
 
+BOOST_AUTO_TEST_CASE(stream_aligner_enable_test)
+{
+
+}

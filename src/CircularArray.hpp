@@ -62,7 +62,7 @@ namespace stream_aligner
 
             data[front_idx] = ts;
             this->elements_count++;
-            std::cout<<"["<<front_idx<<"]"<<data[front_idx]<<" front inserted"<<std::endl;
+            //std::cout<<"["<<front_idx<<"]"<<data[front_idx]<<" front inserted"<<std::endl;
             return;
 
         };
@@ -101,7 +101,7 @@ namespace stream_aligner
 
             data[rear_idx] = ts;
             this->elements_count++;
-            std::cout<<"["<<rear_idx<<"]"<<data[rear_idx]<<" back inserted"<<std::endl;
+            //std::cout<<"["<<rear_idx<<"]"<<data[rear_idx]<<" back inserted"<<std::endl;
             return;
 
         };
@@ -123,7 +123,7 @@ namespace stream_aligner
                 return ts;
             }
 
-            std::cout<<"["<<front_idx<<"]"<<data[front_idx]<<" front deleted"<<std::endl;
+            //std::cout<<"["<<front_idx<<"]"<<data[front_idx]<<" front deleted"<<std::endl;
             ts = data[front_idx];
             this->elements_count--;
 
@@ -162,7 +162,7 @@ namespace stream_aligner
                 return ts;
             }
 
-            std::cout<<"["<<rear_idx<<"]"<<data[rear_idx]<<" back deleted"<<std::endl;
+            //std::cout<<"["<<rear_idx<<"]"<<data[rear_idx]<<" back deleted"<<std::endl;
             ts = data[rear_idx];
             this->elements_count--;
 
@@ -208,6 +208,23 @@ namespace stream_aligner
          * @return pointer to the last element
          */
         T* begin (){return std::__addressof(data[front_idx]);}
+
+       /** rend
+        *
+        * The element preceding the first element in the vector
+        * (which is considered its reverse end).
+        * */
+        T* rend()
+        {
+            if(front_idx==CircularArray::max_size-1 || front_idx == -1)
+            {
+                return std::__addressof(data[0]);
+            }
+            else
+            {
+                return std::__addressof(data[front_idx+1]);
+            }
+        }
 
         /* xbegin
          *
@@ -255,6 +272,15 @@ namespace stream_aligner
             }
         }
 
+        /** rbegin
+         *
+         * pointing to the last element in the vector
+         *
+         * */
+        T* rbegin()
+        {
+                return std::__addressof(data[rear_idx]);
+        }
 
         /** xend
          *
@@ -400,7 +426,7 @@ namespace stream_aligner
          */
         I* end()
         {
-            /** Work around to make the case when begin() == end() **/
+            /** Work around to make the case when end() == begin() **/
             if (counter == 0)
             {
                 return this->last;
@@ -409,6 +435,80 @@ namespace stream_aligner
                 return NULL;
         }
     };
+
+    /** @brief cyclic_reverse_iterator
+     *
+     *  this is the circular array reverse iterator
+     *
+     */
+
+    template< typename I >
+    class cyclic_reverse_iterator
+    {
+        I* it;
+        I *start;
+        I *xstart;
+        I* last;
+        I* xlast;
+        size_t counter;
+    public:
+        /** constructor **/
+        cyclic_reverse_iterator( CircularArray<I>& b )
+            : it(b.rbegin()), start(b.rbegin()), xstart(b.xbegin()), last(b.rend()), xlast(b.xend()), counter(b.size()) {}
+
+        /** increment operator **/
+        cyclic_reverse_iterator &operator++()
+        {
+            ++it;
+            if ( it == xlast+1 )
+            {
+                it = xstart;
+            }
+            counter--;
+        }
+
+        /** equal bolean operator **/
+        friend bool operator==
+            ( cyclic_reverse_iterator const &lhs, cyclic_reverse_iterator const &rhs )
+            { return lhs.it == rhs.it; }
+
+        /** diferent boolena operator **/
+        friend bool operator!=
+            ( cyclic_reverse_iterator const &lhs, cyclic_reverse_iterator const &rhs )
+            { return lhs.it != rhs.it; }
+
+        /** contemt operator **/
+        I& operator*(){ return *it; }
+
+        /** itx
+         *
+         * get element
+         *
+         * @return pointer to the current element
+         * */
+        I* itx(){ return this->it; }
+
+         /** end
+         *
+         * Pointer to the past-the-end element (next element to rear_idx)
+         * The past-the-end element is the theoretical element that would follow
+         * the last element in the array. It does not point to any element, and
+         * thus shall not be dereferenced.
+         *
+         * @return pointer to the past-the-end element
+         */
+        I* rend()
+        {
+            /** Work around to make the case when rend == rbegin() **/
+            if (counter == 0)
+            {
+                return this->last;
+            }
+            else
+                return NULL;
+        }
+    };
+
 
 
 }

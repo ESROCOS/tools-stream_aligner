@@ -311,10 +311,11 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_iterator)
 
     for (size_t i = 0; i<2*buffer.capacity()+1; ++i)
     {
+        /** Iterator makes sense when using push_back **/
         buffer.push_back(i);
-        std::cout<<"["<< i <<"]Push time_stamp "<<i<<std::endl;
+        /*std::cout<<"["<< i <<"]Push time_stamp "<<i<<std::endl;
         std::cout<<"["<< i <<"]address begin "<<buffer.begin()<<std::endl;
-        std::cout<<"["<< i <<"]address end "<<buffer.end()<<std::endl;
+        std::cout<<"["<< i <<"]address end "<<buffer.end()<<std::endl;*/
     }
 
     BOOST_CHECK(buffer.front() == *buffer.begin());
@@ -373,4 +374,40 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_pop_and_push)
     BOOST_CHECK(buffer.back() == 4);
     BOOST_CHECK(buffer.size() == 1);
 }
+
+BOOST_AUTO_TEST_CASE(test_perfect_circular_array_reverse_iterator)
+{
+
+    std::cout<<"\n*** CIRCULAR ARRAY [TEST 9] ***\n";
+
+    stream_aligner::CircularArray<size_t> buffer;
+
+    BOOST_TEST (buffer.empty());
+    std::cout<<"address xbegin "<<buffer.xbegin()<<std::endl;
+    std::cout<<"address xend "<<buffer.xend()<<std::endl;
+
+    for (size_t i = 0; i<2*buffer.capacity()+1; ++i)
+    {
+        /** Reverse iterator makes sense when using push_front **/
+        buffer.push_front(i);
+        /*std::cout<<"["<< i <<"]Push time_stamp "<<i<<std::endl;
+        std::cout<<"["<< i <<"]address rbegin "<<buffer.rbegin()<<std::endl;
+        std::cout<<"["<< i <<"]address rend "<<buffer.rend()<<std::endl;*/
+    }
+
+    BOOST_CHECK(buffer.front() == *buffer.begin());
+    BOOST_TEST (buffer.full());
+
+    /** begin == end if buffer full **/
+    if (buffer.full())
+    {
+        BOOST_CHECK(buffer.rend() == buffer.rbegin());
+    }
+
+    for (stream_aligner::cyclic_reverse_iterator<size_t> it(buffer); it.itx() != it.rend(); ++it)
+    {
+        std::cout<<"time_stamp "<<*it<<" ["<< it.itx()<< "]"<<std::endl;
+    }
+}
+
 

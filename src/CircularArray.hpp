@@ -240,6 +240,11 @@ namespace stream_aligner
          */
         void clear()
         {
+            for (size_t i = 0; i<data.size(); ++i)
+            {
+                data[i] = base::unset<T>();
+            }
+
             front_idx=-1;rear_idx=-1;
         };
     };

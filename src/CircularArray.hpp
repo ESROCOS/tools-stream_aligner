@@ -16,6 +16,7 @@ namespace stream_aligner
     protected:
         std::array<T, max_size> data;
         int front_idx, rear_idx;
+        size_t elements_count;
 
     public:
         /** @brief Constructor
@@ -30,16 +31,62 @@ namespace stream_aligner
         /** @brief insert an element
          *
          *  This methods insert a new element
-         *  in the CircularArray
+         *  at the front of the CircularArray
          *
          *  @param ts the element.
          *  @return void.
          */
-        void push(const T &ts)
+        void push_front(const T &ts)
         {
             if(this->full())
             {
-                this->pop();
+                /** The buffer is full now, so pushing subsequent
+                 elements will overwrite the back-most elements. **/
+                if(rear_idx==CircularArray::max_size-1)
+                    rear_idx=0;
+                else
+                    rear_idx++;
+
+                this->elements_count--;
+            }
+
+            if(front_idx == -1)
+            {
+                front_idx++;
+                rear_idx++;
+            }
+            else if(front_idx==CircularArray::max_size-1)
+                front_idx=0;
+            else
+                front_idx++;
+
+            data[front_idx] = ts;
+            this->elements_count++;
+            std::cout<<"["<<front_idx<<"]"<<data[front_idx]<<" front inserted"<<std::endl;
+            return;
+
+        };
+
+        /** @brief insert an element
+         *
+         *  This methods insert a new element
+         *  at the rear of the CircularArray
+         *
+         *  @param ts the element.
+         *  @return void.
+         */
+        void push_back(const T &ts)
+        {
+            if(this->full())
+            {
+                /** The buffer is full now, so pushing subsequent
+                 elements will overwrite the front-most elements. **/
+                if(front_idx==CircularArray::max_size-1)
+                    front_idx=0;
+                else
+                    front_idx++;
+
+                this->elements_count--;
             }
 
             if(rear_idx == -1)
@@ -53,20 +100,21 @@ namespace stream_aligner
                 rear_idx++;
 
             data[rear_idx] = ts;
+            this->elements_count++;
+            std::cout<<"["<<rear_idx<<"]"<<data[rear_idx]<<" back inserted"<<std::endl;
             return;
 
         };
 
-
         /** @brief remove an element
          *
          *  This methods remove an element
-         *  from the CircularArray
+         *  from the front of the CircularArray
          *
          *  @param void.
          *  @return void.
          */
-        T pop()
+        T pop_front()
         {
             T ts =  base::NaN<T>(); 
 
@@ -75,24 +123,70 @@ namespace stream_aligner
                 return ts;
             }
 
-            //std::cout<<data[front_idx]<<" deleted"<<std::endl;
+            std::cout<<"["<<front_idx<<"]"<<data[front_idx]<<" front deleted"<<std::endl;
             ts = data[front_idx];
+            this->elements_count--;
 
-            if(front_idx==rear_idx)
+            if (rear_idx < front_idx)
             {
-                front_idx=-1;rear_idx=-1;
+                if(front_idx==CircularArray::max_size-1)
+                    front_idx=0;
+                else
+                    front_idx++;
             }
-            else if(front_idx==CircularArray::max_size-1)
-                front_idx=0;
-            else
-                front_idx++;
+            else if (rear_idx > front_idx)
+            {
+                if(front_idx==0)
+                    front_idx=CircularArray::max_size-1;
+                else
+                    front_idx--;
+            }
+
+            return ts;
+        };
+
+        /** @brief remove an element
+         *
+         *  This methods remove an element
+         *  from the rear of the CircularArray
+         *
+         *  @param void.
+         *  @return void.
+         */
+        T pop_back()
+        {
+            T ts =  base::NaN<T>(); 
+
+            if(this->empty())
+            {
+                return ts;
+            }
+
+            std::cout<<"["<<rear_idx<<"]"<<data[rear_idx]<<" back deleted"<<std::endl;
+            ts = data[rear_idx];
+            this->elements_count--;
+
+            if (rear_idx < front_idx)
+            {
+                if(rear_idx==0)
+                    rear_idx=CircularArray::max_size-1;
+                else
+                    rear_idx--;
+            }
+            else if (rear_idx > front_idx)
+            {
+                if(rear_idx==CircularArray::max_size-1)
+                    rear_idx=0;
+                else
+                    rear_idx++;
+            }
 
             return ts;
         };
 
         /** @brief front
          *
-         * It gives the first element without
+         * It gives the front element without
          * removing it from the array
          *
          *  @param void.
@@ -178,7 +272,7 @@ namespace stream_aligner
          */
         bool empty() const
         {
-            if(front_idx==-1)
+            if(this->elements_count == 0)
             {
                 //std::cout<<"\n Circular Queue is empty";
                 return true;
@@ -194,7 +288,7 @@ namespace stream_aligner
          */
         bool full() const
         {
-            if((rear_idx == CircularArray::max_size-1 && front_idx==0) || front_idx==rear_idx+1)
+            if (this->elements_count == this->CircularArray::max_size)
             {
                 //std::cout<<"\nCircular queue is full";
                 return true;
@@ -210,14 +304,7 @@ namespace stream_aligner
          */
         size_t size() const
         {
-            if (empty())
-            {
-                return 0;
-            }
-            else
-            {
-                return 1 + (CircularArray::max_size - front_idx + rear_idx)%CircularArray::max_size;
-            }
+            return this->elements_count;
         };
 
         /** @brief capacity
@@ -245,7 +332,8 @@ namespace stream_aligner
                 data[i] = base::unset<T>();
             }
 
-            front_idx=-1;rear_idx=-1;
+            this->front_idx=-1; this->rear_idx=-1;
+            this->elements_count = 0;
         };
     };
 
@@ -259,13 +347,15 @@ namespace stream_aligner
     class cyclic_iterator
     {
         I* it;
+        I *start;
         I *xstart;
         I* last;
         I* xlast;
+        size_t counter;
     public:
         /** constructor **/
         cyclic_iterator( CircularArray<I>& b )
-            : it(b.begin()), xstart(b.xbegin()), last(b.end()), xlast(b.xend()) {}
+            : it(b.begin()), start(b.begin()), xstart(b.xbegin()), last(b.end()), xlast(b.xend()), counter(b.size()) {}
 
         /** increment operator **/
         cyclic_iterator &operator++()
@@ -275,6 +365,7 @@ namespace stream_aligner
             {
                 it = xstart;
             }
+            counter--;
         }
 
         /** equal bolean operator **/
@@ -307,7 +398,16 @@ namespace stream_aligner
          *
          * @return pointer to the past-the-end element
          */
-        I* end(){ return this->last; }
+        I* end()
+        {
+            /** Work around to make the case when begin() == end() **/
+            if (counter == 0)
+            {
+                return this->last;
+            }
+            else
+                return NULL;
+        }
     };
 
 

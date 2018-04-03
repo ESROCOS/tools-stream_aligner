@@ -1,5 +1,9 @@
 language: cpp
 
+os: linux
+
+env: LINUX=debian-9
+
 compiler:
     - gcc
     - clang

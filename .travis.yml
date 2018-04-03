@@ -9,7 +9,7 @@ install:
     - cd tools-cmake
     - mkdir build && cd build/
     - cmake ..
-    - make && make install
+    - make
     - sudo make install
     - cd ../../
 

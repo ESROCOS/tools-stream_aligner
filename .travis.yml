@@ -7,6 +7,10 @@ compiler:
 install:
     - git clone https://github.com/ESROCOS/tools-cmake.git
     - cd tools-cmake
+    - mkdir build && cd build/
+    - cmake ..
+    - make && make install
+    - cd ../../
 
 script:
     - mkdir build && cd build/

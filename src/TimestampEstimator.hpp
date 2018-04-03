@@ -28,6 +28,9 @@ namespace stream_aligner
         */
         double last_time; //m_last
 
+        /** The estimation window in seconds */
+        double window_time;
+
         /** The latency, i.e. the fixed (or, more accurately, slow drifting)
         * difference between the incoming timestamps and the actual timestamps
         *
@@ -125,11 +128,18 @@ namespace stream_aligner
         /** The total estimated count of lost samples so far */
         int getLostSampleCount() const;
 
+
+        void shortSamples (double current);
+
         /** The currently estimated period
+         *
          * @return the period in case the buffer
          * is full or the configuration period otherwise
          * **/
         base::Time getPeriod() const;
+
+        /** Returns true if updateLoss and getPeriod can give valid estimates */
+        bool haveEstimate() const;
 
         /** Returns the current latency estimate. This is valid only if
          * updateReference() is called

@@ -20,8 +20,11 @@ namespace stream_aligner {
          */
         base::Time latency;
 
-        /** Window of the Timestamp estimator **/
-        size_t window;
+        /** Window time of the Timestamp estimator **/
+        base::Time window_time;
+
+        /** Window capacity of the Timestamp estimator **/
+        size_t capacity;
 
         /** Count of samples currently stored in the estimator
          * */
@@ -53,8 +56,11 @@ namespace stream_aligner {
             << "stamp: " << status.stamp.toString() << "\n"
             << "period: " << status.period.toSeconds() << "\n"
             << "latency: " << status.latency.toSeconds() << "\n"
+            << "window_time: " << status.window_time.toSeconds() << "\n"
+            << "capacity: " << status.period.toSeconds() << "\n"
             << "lost_samples: " << status.lost_samples << "\n"
-            << "window: " << status.window << std::endl;
+            << "lost_samples_total: " << status.lost_samples_total << "\n"
+            << "base_time: " << status.base_time.toString() << std::endl;
         return stream;
     };
 }

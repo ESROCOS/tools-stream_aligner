@@ -5,6 +5,8 @@ compiler:
     - clang
 
 install:
+    - git clone git@github.com:ESROCOS/tools-cmake.git
+    - cd tools-cmake
 
 script:
     - mkdir build && cd build/

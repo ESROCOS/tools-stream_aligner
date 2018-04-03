@@ -1,0 +1,19 @@
+language: cpp
+
+compiler:
+    - gcc
+    - clang
+
+install:
+
+script:
+    - mkdir build && cd build/
+    - cmake ..
+    - make
+    - make test
+
+notifications:
+    email:
+        - havyhidalgo@gmail.com
+
+

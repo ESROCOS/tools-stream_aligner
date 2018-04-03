@@ -37,6 +37,16 @@ install:
     - sudo make install
     - cd ../../
 
+    # SISL library
+    - git clone https://github.com/SINTEF-Geometry/SISL.git base-sisl
+    - cd base-sisl
+    - git checkout tag/SISL_4_5_0
+    - mkdir build && cd build/
+    - cmake ..
+    - make
+    - sudo make install
+    - cd ../../
+
     # esrocos types
     - git clone https://github.com/jhidalgocarrio/base-types.git
     - cd base-types
@@ -45,13 +55,8 @@ install:
     - make
     - sudo make install
     - cd ../../
-    - git clone https://github.com/jhidalgocarrio/base-types.git
-    - cd base-types
-    - mkdir build && cd build/
-    - cmake ..
-    - make
-    - sudo make install
-    - cd ../../
+
+
 
 script:
     - mkdir build && cd build/

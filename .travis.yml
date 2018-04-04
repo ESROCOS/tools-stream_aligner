@@ -1,28 +1,39 @@
 language: cpp
 
-os: linux
+matrix:
+    include:
+    - os: linux
+        addons:
+            apt:
+              sources:
+                - ubuntu-toolchain-r-test
+              packages:
+                - gcc-7
+                - g++-7
+        env:
+            - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
-dist: trusty
+    - os: linux
+        addons:
+            apt:
+              sources:
+                - ubuntu-toolchain-r-test
+              packages:
+                - gcc-3.4
+                - g++-3.4
+        env:
+            - MATRIX_EVAL="CC=gcc-3.4 && CXX=g++-3.4"
 
-addons:
-    apt:
-      sources:
-        - ubuntu-toolchain-r-test
-      packages:
-        - gcc-7
-        - g++-7
-    apt:
-      sources:
-        - ubuntu-toolchain-r-test
-      packages:
-        - gcc-3.4
-        - g++-3.4
-    apt:
-      sources:
-        - llvm-toolchain-trusty-4.0
-      packages:
-        - clang-4.0
-        - libc++-dev
+    - os: linux
+        addons:
+            apt:
+              sources:
+                - llvm-toolchain-trusty-4.0
+              packages:
+                - clang-4.0
+                - libc++-dev
+        env:
+            - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
 before_install:
     - eval "${MATRIX_EVAL}"

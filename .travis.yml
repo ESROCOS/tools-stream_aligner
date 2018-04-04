@@ -60,12 +60,11 @@ install:
     - sudo make install
     - cd ../../
 
-
-
 script:
     - mkdir build && cd build/
     - cmake ..
     - make
+    - make test
 
 notifications:
     email:

@@ -369,7 +369,7 @@ namespace stream_aligner
      *
      */
 
-    template< typename I >
+    template< typename I = base::Time, size_t N = 10>
     class cyclic_iterator
     {
         I* it;
@@ -380,7 +380,7 @@ namespace stream_aligner
         size_t counter;
     public:
         /** constructor **/
-        cyclic_iterator( CircularArray<I>& b )
+        cyclic_iterator( CircularArray<I, N>& b )
             : it(b.begin()), start(b.begin()), xstart(b.xbegin()), last(b.end()), xlast(b.xend()), counter(b.size()) {}
 
         /** increment operator **/
@@ -442,7 +442,7 @@ namespace stream_aligner
      *
      */
 
-    template< typename I >
+    template< typename I = base::Time, size_t N = 10>
     class cyclic_reverse_iterator
     {
         I* it;
@@ -453,7 +453,7 @@ namespace stream_aligner
         size_t counter;
     public:
         /** constructor **/
-        cyclic_reverse_iterator( CircularArray<I>& b )
+        cyclic_reverse_iterator( CircularArray<I, N>& b )
             : it(b.rbegin()), start(b.rbegin()), xstart(b.xbegin()), last(b.rend()), xlast(b.xend()), counter(b.size()) {}
 
         /** increment operator **/

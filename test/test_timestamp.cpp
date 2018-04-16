@@ -118,12 +118,12 @@ public:
     {
         addResultToPlot(estimated_time, estimated_period);
 
-        if ((std::abs((estimated_time - real_time).toSeconds()) > actual_period.toSeconds() / 10))
+        if ((std::abs((estimated_time - real_time).toSeconds()) > this->actual_period.toSeconds() / 10))
         {
             std::cout<<"estimated time: "<<estimated_time.toString()<<" real time: "<<real_time.toString()<<"\n";
         }
 
-        BOOST_CHECK_SMALL(std::abs((estimated_time - real_time).toSeconds()), actual_period.toSeconds() / 10);
+        BOOST_CHECK_SMALL(std::abs((estimated_time - real_time).toSeconds()), this->actual_period.toSeconds() / 10);
     }
 };
 
@@ -139,7 +139,7 @@ enum LOSS_ANNOUNCE_METHODS
 void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has_drift, int init, double loss_rate, LOSS_ANNOUNCE_METHODS loss_announce_method = USE_NONE)
 {
     /** this test case tries to emulate the values of an hokuyo laser scanner **/
-    static const int COUNT = 10000;
+    static const int COUNT = 10;
 
     std::stringstream csv_filename;
     csv_filename << "test_timestamper";
@@ -230,12 +230,12 @@ BOOST_AUTO_TEST_CASE(test_perfect_stream)
     for (int i = 0; i < 10000; ++i)
     {
         time = time + step;
-        std::cout<<"time: "<<time.toString()<<"\n";
+        //std::cout<<"time: "<<time.toString()<<"\n";
         BOOST_REQUIRE_CLOSE(time.toSeconds(), estimator.update(time).toSeconds(), 0.0000001);
         BOOST_REQUIRE_EQUAL(0, estimator.getLostSampleCount());
     }
 
-    std::cout<<"estimated period:" <<estimator.getPeriod().toSeconds() <<"\n";
+    //std::cout<<"estimated period:" <<estimator.getPeriod().toSeconds() <<"\n";
     BOOST_REQUIRE_CLOSE(step.toSeconds(), estimator.getPeriod().toSeconds(), 1e-6);
 
     std::cout<< estimator.getStatus() <<std::endl;
@@ -244,7 +244,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_stream)
 BOOST_AUTO_TEST_CASE(test_timestamper__plain)
 { test_timestamper_impl(0, false, false, 1000, 0); }
 
-BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period)
-{ test_timestamper_impl(-1, true, false, 0, 0); }
+/*BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period)
+{ test_timestamper_impl(-1, true, false, 0, 0); }*/
 
 

@@ -11,7 +11,7 @@ namespace stream_aligner
     {
 
     protected:
-        static const size_t  BUFFER_SIZE = 20;
+        static const size_t  BUFFER_SIZE = 100;
 
     protected:
         /** To avoid loss of precision while manipulating doubles, we move all

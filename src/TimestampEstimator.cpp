@@ -41,6 +41,9 @@ base::Time TimestampEstimator::update(base::Time ts)
     /** We use doubles internally. Convert to it. **/
     double current = (ts - start_time).toSeconds();
 
+    /** Remove values outside the window **/
+    this->shortSamples(current);
+
     if (this->samples.empty())
     {
         this->resetBaseTime(current, current);
@@ -55,7 +58,6 @@ base::Time TimestampEstimator::update(base::Time ts)
 
     /** update the window time **/
     this->window_time = this->samples.capacity() * period;
-
 
     /** Check for lost samples
 
@@ -188,6 +190,16 @@ void TimestampEstimator::shortSamples(double current)
             this->missing_samples = 0;
             return;
         }
+
+        for (stream_aligner::cyclic_iterator<double, BUFFER_SIZE> it(this->samples);
+                it.itx() != it.end(); ++it)
+        {
+            if (base::isUnset(*it))
+            {
+                this->missing_samples--;
+            }
+        }
+
     }
 
     if (this->samples.size() == this->missing_samples)
@@ -276,6 +288,6 @@ void TimestampEstimator::resetBaseTime(double new_value, double reset_time)
     this->last_time = new_value;
     this->base_time_reset = reset_time;
     if (!this->last_reference.isNull())
-        updateReference(this->last_reference);
+        this->updateReference(this->last_reference);
 }
 

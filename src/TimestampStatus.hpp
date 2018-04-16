@@ -57,7 +57,7 @@ namespace stream_aligner {
             << "period: " << status.period.toSeconds() << "\n"
             << "latency: " << status.latency.toSeconds() << "\n"
             << "window_time: " << status.window_time.toSeconds() << "\n"
-            << "capacity: " << status.period.toSeconds() << "\n"
+            << "capacity: " << status.capacity << "\n"
             << "lost_samples: " << status.lost_samples << "\n"
             << "lost_samples_total: " << status.lost_samples_total << "\n"
             << "base_time: " << status.base_time.toString() << std::endl;

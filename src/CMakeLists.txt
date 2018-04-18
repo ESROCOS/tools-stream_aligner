@@ -2,9 +2,11 @@ set(headers CircularArray.hpp
             TimestampConfig.hpp
             TimestampStatus.hpp
             TimestampEstimator.hpp
-            StreamAligner.hpp)
+            StreamAligner.hpp
+	    StreamAlignerStatus.hpp)
 
-set(sources TimestampEstimator.cpp)
+set(sources TimestampEstimator.cpp
+	    StreamAlignerStatus.cpp)
 
 esrocos_library(stream_aligner
                 HEADERS ${headers}

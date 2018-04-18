@@ -8,6 +8,7 @@
 
 #include <boost/function.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/circular_buffer.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -17,37 +18,55 @@
 
 namespace stream_aligner
 {
+    /**
+     * StreamBase
+     *
+     * @brief Base class of Stream
+     *
+     * */
 
     class StreamBase
 	{
     friend class StreamAligner;
 
     protected:
-		mutable StreamAlignerStatus status;
+        /** Stream status (one stream) **/
+        mutable StreamStatus status;
 
-		/** marks a stream as active or inactive. All streams are active by default. */
-		bool active;
+        /** marks a stream as active or inactive. All streams are active by default. */
+        bool active;
 
 	public:
-		StreamBase() : active( true ) {}
-		virtual ~StreamBase() {}
-		virtual base::Time pop() = 0;
-		virtual bool hasData() const = 0;
-		virtual int getPriority() const = 0;
-		virtual base::Time latestTimeStamp() const = 0;
-		virtual base::Time latestDataTime() const = 0;
-		virtual base::Time earliestDataTime() const = 0;
-		virtual const StreamAlignerStatus &getBufferStatus() const = 0;
-		virtual void copyState( const StreamBase& other ) = 0;
-		virtual void clear() = 0;
+        StreamBase() : active( true ) {}
+        virtual ~StreamBase() {}
+        virtual base::Time pop() = 0;
+        virtual bool hasData() const = 0;
+        virtual int getPriority() const = 0;
+        virtual base::Time latestTimeStamp() const = 0;
+        virtual base::Time latestDataTime() const = 0;
+        virtual base::Time earliestDataTime() const = 0;
+        virtual const StreamStatus &getBufferStatus() const = 0;
+        virtual void copyState( const StreamBase& other ) = 0;
+        virtual void clear() = 0;
 
-		bool isActive() const { return active; }
-		void setActive( bool active ) { this->active = active; }
-		
-		friend std::ostream &operator<<(std::ostream &stream, const stream_aligner::StreamAligner::StreamBase &base);
+        bool isActive() const { return active; }
+        void setActive( bool active ) { this->active = active; }
+
+        friend std::ostream &operator<<(std::ostream &stream, const stream_aligner::StreamBase &base);
 	};
 
-    template <class T> class Stream : public StreamBase
+    /**
+     * Stream
+     *
+     * @brief Stream class of samples
+     *
+     * T is the template class of the streams.
+     * BUFFER_SIZE This should be at least the amount of samples that can occur in a timeout period.
+     *
+     * */
+
+    template <class T, size_t BUFFER_SIZE>
+    class Stream : public StreamBase
 	{
 	public:
 
@@ -57,13 +76,10 @@ namespace stream_aligner
 
         /** Define type of the elements in the buffer **/
 	    typedef std::pair<base::Time,T> item;
-        
-        /** Fixed size for the buffer of samples **/
-        static const size_t  BUFFER_SIZE = 100;
 
 	protected:
-        stream_aligner::CircularArray<item> buffer;
-	    size_t bufferSize;
+        stream_aligner::CircularArray<item, BUFFER_SIZE> buffer;
+       // boost::circular_buffer<item> buffer;
 	    callback_t callback;
 	    base::Time period; 
 	    base::Time lastTime;
@@ -71,19 +87,13 @@ namespace stream_aligner
 
 	public:
 
-	    Stream(callback_t callback, size_t bufferSize, base::Time period, int priority, const std::string &name):
-            bufferSize( bufferSize ), callback(callback), period(period), lastTime(base::Time::fromSeconds(0)), priority(priority)
+	    Stream(callback_t callback, base::Time period, int priority, const std::string &name):
+            callback(callback), period(period), lastTime(base::Time::fromSeconds(0)), priority(priority)
         {
             status.name = name;
             status.priority = priority;
+            //buffer.set_capacity(BUFFER_SIZE);
 
-            if (bufferSize > 0)
-                buffer.set_capacity( bufferSize );
-            else
-            {
-                // initial size, will be reallocated at runtime
-                buffer.set_capacity( 20 );
-            }
             status.buffer_size = buffer.capacity();
         }
 
@@ -103,22 +113,21 @@ namespace stream_aligner
     		return priority;
 	    }
 
-	    virtual const StreamAlignerStatus &getBufferStatus() const
+	    virtual const StreamStatus &getBufferStatus() const
 	    {
-            status.buffer_fill = buffer.size();
-            status.latest_data_time = latestDataTime();
-            status.earliest_data_time = earliestDataTime();
-            status.active = isActive();
+            this->status.buffer_fill = buffer.size();
+            this->status.latest_data_time = latestDataTime();
+            this->status.earliest_data_time = earliestDataTime();
+            this->status.active = isActive();
             return status;
 	    }
 
 	    virtual void copyState( const StreamBase& other )
 	    {
-            const Stream<T> &stream(dynamic_cast<const Stream<T>& >(other));
+            const Stream<T, BUFFER_SIZE> &stream(dynamic_cast<const Stream<T, BUFFER_SIZE>& >(other));
 
             lastTime = stream.lastTime;
             buffer = stream.buffer;
-            bufferSize = stream.bufferSize;
             status = stream.status;
 	    }
 
@@ -134,17 +143,9 @@ namespace stream_aligner
 
             if (buffer.full())
             {
-                if (bufferSize > 0)
-                {
-                    // if the buffer is full, just use the behaviour of the circular
-                    // buffer: discard old data.
-                    status.samples_dropped_buffer_full++;
-                }
-                else
-                {
-                    buffer.set_capacity(buffer.capacity() * 2);
-                    status.buffer_size = buffer.capacity();
-                }
+                // if the buffer is full, just use the behaviour of the circular
+                // buffer: discard old data.
+                status.samples_dropped_buffer_full++;
 		    }
             buffer.push_back(std::make_pair(ts, data)); 
 	    }
@@ -152,14 +153,15 @@ namespace stream_aligner
 	    /** take the last item of the stream queue and 
 	     * call the callback 
 	     */
-	    base::Time pop() 
+	    base::Time pop()
 	    {
             if( hasData() )
             {
                 status.samples_processed++;
                 base::Time ts = buffer.front().first;
                 if(callback)
-                callback( ts, buffer.front().second );
+                    callback(ts, buffer.front().second);
+
                 buffer.pop_front();
                 return ts;
             }
@@ -203,7 +205,30 @@ namespace stream_aligner
             status.buffer_fill = 0;
             status.active = true;
 	    };
+
+        void print()
+        {
+            /*typename boost::circular_buffer<item>::iterator it;
+            for (it = this->buffer.begin(); it != this->buffer.end(); ++it)
+            {
+                item element = *it;
+                std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
+            }*/
+
+            for (stream_aligner::cyclic_iterator<item, 4> it(buffer); it.itx() != it.end(); ++it)
+            {
+                item element = *it;
+                std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
+            }
+        }
 	};
+
+    /**
+     * Stream Aligner
+     *
+     * @brief Alegnement of streams
+     *
+     */
     class StreamAligner
     {
 
@@ -224,15 +249,39 @@ namespace stream_aligner
         /** time of the last sample that went out */
         base::Time current_ts;
 
-        double buffer_size_factor;
-
         /** temporary object that gets returned by getStatus, 
          * in order to avoid dynamic allocation on each call */
         mutable StreamAlignerStatus status;
 
+    protected:
+        static bool compareStreams( const StreamBase* b1, const StreamBase* b2 )
+        {
+            if(!b1)
+                return false;
+
+            if(!b2)
+                return true;
+
+            const base::Time &ts1( b1->latestTimeStamp() );
+            const base::Time &ts2( b2->latestTimeStamp() );
+
+            if(ts1 == ts2)
+            {
+                if(b1->hasData() && !b2->hasData())
+                    return true;
+
+                if(!b1->hasData() && b2->hasData())
+                    return false;
+
+                return b1->getPriority() < b2->getPriority();
+            }
+
+            return ts1 < ts2;
+        }
+
+
     public:
-    	explicit StreamAligner(base::Time timeout = base::Time::fromSeconds(1)):
-            timeout(timeout), buffer_size_factor(2.0) {}
+    	explicit StreamAligner(base::Time timeout = base::Time::fromSeconds(1)): timeout(timeout){}
 
     	virtual ~StreamAligner()
     	{
@@ -272,7 +321,7 @@ namespace stream_aligner
 	 * This number effectively puts an upper limit to the lag that can be created due to 
 	 * delay or missing values on the channels.
 	 */
-	void setTimeout(const base::Time &t )
+	void setTimeout(const base::Time &t)
 	{
 	    timeout = t;
 	}
@@ -289,7 +338,7 @@ namespace stream_aligner
 	 * optional, so that the other streams won't be delayed up to the
 	 * maximum time out value.
 	 */
-	void disableStream( int idx )
+	void disableStream(int idx)
 	{
 	    if(!streams[idx])
 		throw std::runtime_error("invalid stream index.");		
@@ -303,7 +352,7 @@ namespace stream_aligner
 	 * All streams are enabled by default. Does not have any effect on
 	 * streams which are already enabled.
 	 */
-	void enableStream( int idx )
+	void enableStream(int idx)
 	{
 	    if(!streams[idx])
 		throw std::runtime_error("invalid stream index.");		
@@ -316,7 +365,7 @@ namespace stream_aligner
 	 *
 	 * @return true if the stream is enabled (active)
 	 */
-	bool isStreamActive( int idx ) const 
+	bool isStreamActive(int idx) const 
 	{
 	    if(!streams[idx])
 		    throw std::runtime_error("invalid stream index.");		
@@ -344,7 +393,7 @@ namespace stream_aligner
 	    status.streams[idx].active = false;
 	}
 
-	/** Will register a stream with the aggregator.
+	/** Will register a stream with the stream_aligner.
 	 *
 	 * @param callback - will be called for data gone through the synchronization process
 	 * @param period - time between sensor readings. This will be used to estimate when the 
@@ -352,10 +401,6 @@ namespace stream_aligner
 	 *	possible. Set to 0 if not a periodic stream. When set to a
 	 *	negative value, the calculation of the buffer is performed for
 	 *	that period, however no lookahead is set.
-	 * @param bufferSize - The size of the internal FIFO buffer. This should be at least 
-	 *  	the amount of samples that can occur in a timeout period. If no
-	 *  	value is provided, the bufferSize is calculated from the period
-	 *  	and timeout values provided, with an additional safety factor.
 	 * @param priority - if streams have data with equal timestamps, the
 	 *      one with the lower priority value will be pushed first.
 	 *
@@ -363,32 +408,9 @@ namespace stream_aligner
 	 * 
 	 * @result - stream index, which is used to identify the stream (e.g. for push).
 	 */
-	template <class T> int registerStream( typename Stream<T>::callback_t callback, int bufferSize, base::Time period, int priority  = -1, const std::string &name = std::string()) 
+	template <class T, size_t BUFFER_SIZE> int registerStream( typename Stream<T, BUFFER_SIZE>::callback_t callback, base::Time period, int priority  = -1, const std::string &name = std::string())
 	{
-	    if( bufferSize < 0 )
-	    {
-            if( period == base::Time() )
-            {
-                throw std::runtime_error("No buffer size provided for stream with unknown period.");
-            }
-            else if( period < base::Time() )
-            {
-                // for a negative period, just calculate the buffer size, but don't set any lookahead.
-                bufferSize = buffer_size_factor * std::ceil( timeout.toSeconds() / -period.toSeconds() );
-                period = base::Time();
-            }
-            else
-            {
-                bufferSize = buffer_size_factor * std::ceil( timeout.toSeconds() / period.toSeconds() );
-            }
-        }
-
-	    if( bufferSize == 0 )
-	    {
-            LOG_DEBUG_S << "dynamically allocating stream aligner buffer for stream: " << name;
-	    }
-
-	    StreamBase *newStream = new Stream<T>(callback, bufferSize, period, priority, name);
+	    StreamBase *newStream = new Stream<T, BUFFER_SIZE>(callback, period, priority, name);
 
 	    //check if there is a free slot from a previous deleted stream
 	    for(size_t i = 0; i < streams.size(); i++)
@@ -396,13 +418,13 @@ namespace stream_aligner
             if(!streams[i])
             {
                 streams[i] = newStream;
-                status.streams[i] = StreamAlignerStatus();
+                status.streams[i] = StreamStatus();
                 return i;
             }
 	    }
 		
 	    streams.push_back( newStream );
-	    status.streams.push_back(StreamAlignerStatus());
+	    status.streams.push_back(StreamStatus());
 	    return streams.size() - 1;
 	}
 	
@@ -414,12 +436,12 @@ namespace stream_aligner
 	 * @param ts - the timestamp of the data item
 	 * @param data - the data added to the stream
 	 */
-	template <class T> void push( int idx, const base::Time &ts, const T& data )
+	template <class T, size_t BUFFER_SIZE> void push( int idx, const base::Time &ts, const T& data )
 	{
 	    if( !streams.at(idx) )
             throw std::runtime_error("invalid stream index.");
 
-        Stream<T>* stream = dynamic_cast<Stream<T>*>(streams[idx]);
+        Stream<T, BUFFER_SIZE>* stream = dynamic_cast<Stream<T, BUFFER_SIZE>*>(streams[idx]);
         assert( stream );
 
         stream->status.samples_received++;
@@ -434,23 +456,23 @@ namespace stream_aligner
 	    //will never be played back and gets dropped by default
 	    if(ts < current_ts) 
 	    {
-		status.samples_dropped_late_arriving++;
-		stream->status.samples_dropped_late_arriving++;
-		return;
+            status.samples_dropped_late_arriving++;
+            stream->status.samples_dropped_late_arriving++;
+            return;
 	    }
 
 	    if( ts > latest_ts )
     		latest_ts = ts;
 
-	    stream->push( ts, data );
+	    stream->push(ts, data);
 	}
 
-	template <class T> bool getNextSample( int idx, std::pair<base::Time,T> &sample) const
+	template <class T, size_t BUFFER_SIZE> bool getNextSample( int idx, std::pair<base::Time,T> &sample) const
 	{
 	    if( !streams.at(idx) )
             throw std::runtime_error("invalid stream index.");
 
-	    Stream<T>* stream = dynamic_cast<Stream<T>*>(streams[idx]);
+	    Stream<T, BUFFER_SIZE>* stream = dynamic_cast<Stream<T, BUFFER_SIZE>*>(streams[idx]);
 	    assert( stream );
 
 	    return stream->getNextSample(sample);
@@ -472,24 +494,34 @@ namespace stream_aligner
 	 *
 	 *  @result - true if a callback was called and more data might be available 
 	 */
+    template<class T, size_t BUFFER_SIZE>
 	bool step()
 	{
-	    if( streams.empty() )
+	    if(this->streams.empty() )
             return false;
 
-	    // copy streams vector and sort it by next ts
-	    stream_vector items = streams;
-	    std::sort( items.begin(), items.end(), &compareStreams );
+	    /** copy streams vector and sort it by next ts **/
+	    stream_vector items = this->streams;
+	    std::sort(items.begin(), items.end(), &compareStreams);
+
+        size_t idx = 0;
+	    for(stream_vector::iterator it=this->streams.begin();it != this->streams.end();it++)
+        {
+            Stream<T, BUFFER_SIZE> *p = dynamic_cast<Stream<T, BUFFER_SIZE>*> (*it);
+            std::cout<<"** Stream ["<< idx <<"] **\n";
+            p->print();
+            idx++;
+        }
 
 	    for(stream_vector::iterator it=items.begin();it != items.end();it++)
 	    {
-            //first stream is unregistered no data there
+            /** first stream is unregistered no data there **/
             if(!*it)
                 return false;
 
-            if( (*it)->hasData() ) 
+            if((*it)->hasData()) 
             {
-                // if stream has current data, pop that data
+                /** if stream has current data, pop that data **/
                 current_ts = (*it)->pop();
                 return true;
             }
@@ -498,10 +530,10 @@ namespace stream_aligner
                 base::Time latestDataTime;
                 base::Time firstDataTime;
 
-                //initalization case
+                /** initalization case **/
                 if(current_ts == base::Time())
                 {
-                    //check if one stream timed out
+                    /** check if one stream timed out **/
                     for(stream_vector::iterator it2=items.begin();it2 != items.end();it2++)
                     {
                         if(*it2 && (*it2)->hasData())
@@ -522,8 +554,8 @@ namespace stream_aligner
 
                 if(latestDataTime - firstDataTime < timeout)
                 {
-                    // if there is no data, but the expected data has
-                    // not run out yet, wait for it.
+                    /** if there is no data, but the expected data has
+                    not run out yet, wait for it. **/
                     return false;
                 }
             }
@@ -580,7 +612,7 @@ namespace stream_aligner
 	/** return the buffer status as a std::pair. first element in pair is
 	 * the current buffer fill and the second element is the buffer size 
 	 */
-	const StreamAlignerStatus &getBufferStatus(int idx) const
+	const StreamStatus &getBufferStatus(int idx) const
 	{
 	    if( !streams.at(idx) )
             throw std::runtime_error("invalid stream index.");
@@ -598,15 +630,15 @@ namespace stream_aligner
 
 	    for(size_t i=0;i<streams.size();i++)
 	    {
-		if(streams[i])
-		    status.streams[i] = streams[i]->getBufferStatus();
+    		if(streams[i])
+    		    status.streams[i] = streams[i]->getBufferStatus();
 	    }
 
 	    return status;
 	}
 
-	friend std::ostream &operator<<(std::ostream &stream, const aggregator::StreamAligner::StreamBase &base);
-	friend std::ostream &operator<<(std::ostream &stream, const aggregator::StreamAligner &re);
+	friend std::ostream &operator<<(std::ostream &stream, const stream_aligner::StreamBase &base);
+	friend std::ostream &operator<<(std::ostream &stream, const stream_aligner::StreamAligner &re);
 
     };
 
@@ -623,7 +655,7 @@ namespace stream_aligner
     	return stream;
     }
 
-    inline std::ostream &operator<<(std::ostream &stream, const stream_aligner::StreamAligner::StreamBase &base)
+    inline std::ostream &operator<<(std::ostream &stream, const stream_aligner::StreamBase &base)
     {
         using ::operator <<;
         stream << base.getBufferStatus();

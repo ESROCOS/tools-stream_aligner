@@ -127,20 +127,10 @@ namespace stream_aligner
             ts = data[front_idx];
             this->elements_count--;
 
-            if (rear_idx < front_idx)
-            {
-                if(front_idx==CircularArray::max_size-1)
-                    front_idx=0;
-                else
-                    front_idx++;
-            }
-            else if (rear_idx > front_idx)
-            {
-                if(front_idx==0)
-                    front_idx=CircularArray::max_size-1;
-                else
-                    front_idx--;
-            }
+            if(front_idx==CircularArray::max_size-1)
+                front_idx=0;
+            else
+                front_idx++;
 
             return ts;
         };
@@ -166,20 +156,10 @@ namespace stream_aligner
             ts = data[rear_idx];
             this->elements_count--;
 
-            if (rear_idx < front_idx)
-            {
-                if(rear_idx==0)
-                    rear_idx=CircularArray::max_size-1;
-                else
-                    rear_idx--;
-            }
-            else if (rear_idx > front_idx)
-            {
-                if(rear_idx==CircularArray::max_size-1)
-                    rear_idx=0;
-                else
-                    rear_idx++;
-            }
+            if(rear_idx==0)
+                rear_idx=CircularArray::max_size-1;
+            else
+                rear_idx--;
 
             return ts;
         };
@@ -392,6 +372,7 @@ namespace stream_aligner
                 it = xstart;
             }
             counter--;
+            return *this;
         }
 
         /** equal bolean operator **/
@@ -465,6 +446,7 @@ namespace stream_aligner
                 it = xstart;
             }
             counter--;
+            return *this;
         }
 
         /** equal bolean operator **/

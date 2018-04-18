@@ -332,6 +332,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_iterator)
         std::cout<<"time_stamp "<<*it<<" ["<< it.itx()<< "]"<<std::endl;
     }
 }
+
 BOOST_AUTO_TEST_CASE(test_perfect_circular_array_pop_and_push)
 {
 
@@ -410,4 +411,56 @@ BOOST_AUTO_TEST_CASE(test_perfect_circular_array_reverse_iterator)
     }
 }
 
+BOOST_AUTO_TEST_CASE(test_perfect_circular_item_array_iterator)
+{
+
+    typedef std::pair<base::Time,std::string> item;
+    std::cout<<"\n*** CIRCULAR ARRAY [TEST 10] ***\n";
+
+    stream_aligner::CircularArray<item, 4> buffer;
+    base::Time time_stamp, time_start =  base::Time::now();
+    base::Time step = base::Time::fromSeconds(1);
+
+    BOOST_CHECK (buffer.empty() == true);
+    std::cout<<"address xbegin "<<buffer.xbegin()<<std::endl;
+    std::cout<<"address xend "<<buffer.xend()<<std::endl;
+    time_stamp = time_start;
+
+
+    for (size_t i = 0; i<2*buffer.capacity()+1; ++i)
+    {
+        /** Iterator makes sense when using push_back **/
+        buffer.push_back(item(time_stamp, std::to_string(i)));
+        time_stamp = time_stamp + step;
+    }
+
+    BOOST_CHECK(buffer.front() == *buffer.begin());
+    BOOST_CHECK (buffer.full() == true);
+
+    /** begin == end if buffer full **/
+    if (buffer.full())
+    {
+        BOOST_CHECK(buffer.end() == buffer.begin());
+    }
+
+    for (stream_aligner::cyclic_iterator<item, 4> it(buffer); it.itx() != it.end(); ++it)
+    {
+        item element = *it;
+        std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
+    }
+
+    while(!buffer.empty())
+    {
+        item my_it = buffer.pop_front();
+        std::cout<<"*********************\n";
+        std::cout<<"pop element: "<<my_it.second<<"\n";
+        std::cout<<"*********************\n";
+
+        for (stream_aligner::cyclic_iterator<item, 4> it(buffer); it.itx() != it.end(); ++it)
+        {
+            item element = *it;
+            std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
+        }
+    }
+}
 

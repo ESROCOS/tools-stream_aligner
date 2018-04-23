@@ -215,7 +215,7 @@ namespace stream_aligner
                 std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
             }*/
 
-            for (stream_aligner::cyclic_iterator<item, 4> it(buffer); it.itx() != it.end(); ++it)
+            for (stream_aligner::cyclic_iterator<item, BUFFER_SIZE> it(buffer); it.itx() != it.end(); ++it)
             {
                 item element = *it;
                 std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
@@ -504,7 +504,7 @@ namespace stream_aligner
 	    stream_vector items = this->streams;
 	    std::sort(items.begin(), items.end(), &compareStreams);
 
-        size_t idx = 0;
+        /*size_t idx = 0;
 	    for(stream_vector::iterator it=this->streams.begin();it != this->streams.end();it++)
         {
             std::cout<<"** Stream ["<< idx <<"] **\n";
@@ -514,7 +514,7 @@ namespace stream_aligner
                 p->print();
             }
             idx++;
-        }
+        }*/
 
 	    for(stream_vector::iterator it=items.begin();it != items.end();it++)
 	    {

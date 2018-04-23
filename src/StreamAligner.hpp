@@ -507,9 +507,12 @@ namespace stream_aligner
         size_t idx = 0;
 	    for(stream_vector::iterator it=this->streams.begin();it != this->streams.end();it++)
         {
-            Stream<T, BUFFER_SIZE> *p = dynamic_cast<Stream<T, BUFFER_SIZE>*> (*it);
             std::cout<<"** Stream ["<< idx <<"] **\n";
-            p->print();
+            if((*it)->hasData()) 
+            {
+                Stream<T, BUFFER_SIZE> *p = dynamic_cast<Stream<T, BUFFER_SIZE>*> (*it);
+                p->print();
+            }
             idx++;
         }
 

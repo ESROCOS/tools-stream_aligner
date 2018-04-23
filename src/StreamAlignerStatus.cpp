@@ -19,7 +19,7 @@ std::ostream &operator<<(std::ostream &os, const stream_aligner::StreamAlignerSt
 	
     if( status.streams.empty() )
     	return os; 
-    
+
     os << "idx\tname\t\tbsize\tbfill\treceived\tprocessed\tdr_bfull\tdr_late\tbackward time" << std::endl;
 
     int cnt = 0;
@@ -32,9 +32,9 @@ std::ostream &operator<<(std::ostream &os, const stream_aligner::StreamAlignerSt
         }
 	cnt++;
     }
-    
+
     os << "idx\tname\t\tlatest sample\tearliers data\tlatest data\tlatency" << std::endl;
-    
+
     for(std::vector<stream_aligner::StreamStatus>::const_iterator it = status.streams.begin(); it != status.streams.end(); it++)
     {
 	if(it->active)
@@ -49,7 +49,7 @@ std::ostream &operator<<(std::ostream &os, const stream_aligner::StreamAlignerSt
 std::ostream& counters(std::ostream& os, const stream_aligner::StreamStatus& status)
 {
     using ::operator <<;
-    os 	<< status.name << "\t\t"    
+    os 	<< status.name << "\t\t"
 	<< status.buffer_size << "\t"
 	<< status.buffer_fill << "\t"
 	<< status.samples_received << "\t"

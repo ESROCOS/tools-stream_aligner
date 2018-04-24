@@ -5,10 +5,12 @@
 #include <iostream>
 #include <numeric>
 
+#include <boost/bind.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/test/execution_monitor.hpp>
 
 #include <stream_aligner/StreamAligner.hpp>
+#include "PullStreamAligner.hpp"
 
 using namespace stream_aligner;
 
@@ -353,5 +355,58 @@ BOOST_AUTO_TEST_CASE(advanced_timeout)
     /** bigger than period, bus smaller than timeout, do not replay **/
     reader.push<std::string, 5>(s1, base::Time::fromSeconds(4.2), std::string("d"));
     last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
+}
+
+template <class T>
+struct pull_object
+{
+    pull_object() : hasNext( false ) {}
+
+    void setNext(base::Time ts, const T& next)
+    {
+	next_ts = ts;
+	next_value = next;
+	hasNext = true;
+    }
+
+    bool getNext(base::Time& ts, T& next)
+    {
+	if( hasNext )
+	{
+	    next = next_value;
+	    ts = next_ts;
+	    hasNext = false;
+	    return true;
+	}
+	return false;
+    }
+
+    bool hasNext;
+    T next_value;
+    base::Time next_ts;
+};
+
+
+BOOST_AUTO_TEST_CASE( pull_stream_test )
+{
+    std::cout<<"\n*** STREAM_ALIGNER [TEST 13] ***\n";
+    PullStreamAligner reader;
+    reader.setTimeout(base::Time::fromSeconds(2.0));
+
+    pull_object<std::string> p1;
+    pull_object<std::string> p2;
+
+    /** callback, period_time, (optional) priority **/
+    reader.registerStream<std::string, 4>(boost::bind( &pull_object<std::string>::getNext, &p1, _1, _2 ), &test_callback, base::Time::fromSeconds(2));
+    reader.registerStream<std::string, 4>(boost::bind( &pull_object<std::string>::getNext, &p2, _1, _2 ), &test_callback, base::Time::fromSeconds(2), 1);
+
+    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "");
+
+    p1.setNext(base::Time::fromSeconds(2.0), std::string("b"));
+    p2.setNext(base::Time::fromSeconds(1.0), std::string("a"));
+    while( reader.pull() );
+
+    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "b");
 }
 

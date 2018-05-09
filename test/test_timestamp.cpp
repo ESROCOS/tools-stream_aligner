@@ -216,7 +216,8 @@ void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has
         else
             data.checkResult(estimated_time, period);
     }
-    std::cout<<"== END == "<<estimator.getStatus()<<"\n";
+    stream_aligner::TimestampStatus status = estimator.getStatus();
+    std::cout<<"== END == "<<status<<"\n";
 };
 
 
@@ -238,7 +239,8 @@ BOOST_AUTO_TEST_CASE(test_perfect_stream)
     //std::cout<<"estimated period:" <<estimator.getPeriod().toSeconds() <<"\n";
     BOOST_REQUIRE_CLOSE(step.toSeconds(), estimator.getPeriod().toSeconds(), 1e-6);
 
-    std::cout<< estimator.getStatus() <<std::endl;
+    stream_aligner::TimestampStatus status = estimator.getStatus();
+    std::cout<<"== END == "<<status<<"\n";
 }
 
 BOOST_AUTO_TEST_CASE(test_timestamper__plain)

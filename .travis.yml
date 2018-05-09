@@ -32,14 +32,6 @@ before_install:
     - sudo apt-get install libeigen3-dev
 
 install:
-    # esrocos cmake
-    - git clone https://github.com/ESROCOS/tools-cmake.git
-    - cd tools-cmake
-    - mkdir build && cd build/
-    - cmake ..
-    - make
-    - sudo make install
-    - cd ../../
 
     # rock cmake
     - git clone https://github.com/rock-core/base-cmake.git
@@ -49,7 +41,6 @@ install:
     - make
     - sudo make install
     - cd ../../
-
 
     # rock logging
     - git clone https://github.com/rock-core/base-logging.git

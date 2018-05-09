@@ -32,8 +32,8 @@
   <maintainer> ESROCOS Team/all-partners@h2020-esrocos.eu</maintainer>
   <url>https://esrocos.github.io</url>
 
-  <depend package="tools/cmake" />
-  <depend package="base/types" />
+  <depend package="base/cmake" /> <!-- it depends on cmake macros  -->
+  <depend package="base/types" /> <!-- it depends on base types -->
 
   <tags>debug</tags>
 

@@ -8,7 +8,7 @@ set(headers CircularArray.hpp
 set(sources TimestampEstimator.cpp
 	    StreamAlignerStatus.cpp)
 
-esrocos_library(stream_aligner
+rock_library(stream_aligner
                 HEADERS ${headers}
                 SOURCES ${sources}
                 DEPS_PKGCONFIG base-types)

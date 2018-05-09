@@ -1,11 +1,11 @@
-esrocos_testsuite(circulararray-test test_circulararray.cpp
+rock_testsuite(circulararray-test test_circulararray.cpp
     DEPS_PKGCONFIG base-types)
 
-esrocos_testsuite(timestamp-test test_timestamp.cpp
+rock_testsuite(timestamp-test test_timestamp.cpp
     DEPS stream_aligner
     DEPS_PKGCONFIG base-types)
 
-esrocos_testsuite(streamaligner-test test_streamaligner.cpp
+rock_testsuite(streamaligner-test test_streamaligner.cpp
     PullStreamAligner.hpp
     DEPS stream_aligner
     DEPS_PKGCONFIG base-types)

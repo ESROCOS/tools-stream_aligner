@@ -30,6 +30,7 @@ before_install:
     - eval "${MATRIX_EVAL}"
     - sudo apt-get install libboost-all-dev
     - sudo apt-get install libeigen3-dev
+    - gem install rice
 
 install:
 

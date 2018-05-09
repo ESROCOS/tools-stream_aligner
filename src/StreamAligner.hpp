@@ -7,8 +7,6 @@
 #include <base/Time.hpp>
 
 #include <boost/function.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <boost/circular_buffer.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -79,7 +77,6 @@ namespace stream_aligner
 
 	protected:
         stream_aligner::CircularArray<item, BUFFER_SIZE> buffer;
-       // boost::circular_buffer<item> buffer;
 	    callback_t callback;
 	    base::Time period; 
 	    base::Time lastTime;
@@ -208,13 +205,6 @@ namespace stream_aligner
 
         void print()
         {
-            /*typename boost::circular_buffer<item>::iterator it;
-            for (it = this->buffer.begin(); it != this->buffer.end(); ++it)
-            {
-                item element = *it;
-                std::cout<<"time["<<element.first.toString()<<"]: "<<element.second<<"\n";
-            }*/
-
             for (stream_aligner::cyclic_iterator<item, BUFFER_SIZE> it(buffer); it.itx() != it.end(); ++it)
             {
                 item element = *it;

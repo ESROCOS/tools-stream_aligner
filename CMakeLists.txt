@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-set(ESROCOS_USE_CXX11 TRUE)
+set(ROCK_USE_CXX11 TRUE)
 find_package (rock)
 set(ROCK_TEST_ENABLED ON)
 

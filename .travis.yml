@@ -61,8 +61,8 @@ install:
     - sudo make install
     - cd ../../
 
-    # esrocos types
-    - git clone https://github.com/jhidalgocarrio/base-types.git
+    # rock types
+    - git clone https://github.com/rock-core/base-types.git
     - cd base-types
     - mkdir build && cd build/
     - cmake ..

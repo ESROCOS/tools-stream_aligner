@@ -183,7 +183,7 @@ void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has
     /** estimator for testing **/
     stream_aligner::TimestampEstimator estimator(base::Time::fromSeconds(20), initial_period);
 
-    std::cout<<"== START == "<<estimator.getStatus()<<"\n";
+    //std::cout<<"== START == "<<estimator.getStatus()<<"\n";
 
     for (int i = 0; i < COUNT; ++i)
     {
@@ -208,15 +208,17 @@ void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has
         if (hardware_order > 0)
             estimator.updateReference(data.hw_time);
 
-        base::Time period = estimator.getPeriod();
+        base::Time period;
+        if (estimator.haveEstimate())
+            period = estimator.getPeriod();
 
         if (i < init)
             data.addResultToPlot(estimated_time, period);
         else
             data.checkResult(estimated_time, period);
     }
-    stream_aligner::TimestampStatus status = estimator.getStatus();
-    std::cout<<"== END == "<<status<<"\n";
+    //stream_aligner::TimestampStatus status = estimator.getStatus();
+    //std::cout<<"== END == "<<status<<"\n";
 };
 
 

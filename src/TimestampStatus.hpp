@@ -3,7 +3,8 @@
 
 #include <base/Time.hpp>
 
-namespace stream_aligner {
+namespace stream_aligner
+{
     /** Structure used to report the internal state of a TimestampEstimator
      * instance
      */
@@ -11,57 +12,60 @@ namespace stream_aligner {
     {
         /** When this data structure has been generated */
         base::Time stamp;
-
-        /** Last estimated period */
+        /** Estimated period */
         base::Time period;
-
         /** Estimated latency (always null if no hardware timestamps are
          * provided)
          */
         base::Time latency;
 
-        /** Window time of the Timestamp estimator **/
-        base::Time window_time;
-
-        /** Window capacity of the Timestamp estimator **/
-        size_t capacity;
-
-        /** Count of samples currently stored in the estimator
-         * */
-        int lost_samples;
+        /** Last input time provided to the input estimator
+         */
+        base::Time time_raw;
+        /** Last reference time provided to the input estimator
+         */
+        base::Time reference_time_raw;
 
         /** Total count of lost samples
          */
         int lost_samples_total;
-
+        /** Count of lost samples currently stored in the estimator
+         */
+        int lost_samples;
+        /** Count of samples currently stored in the estimator
+         */
+        int window_size;
+        /** Maximum window capacity
+         */
+        int window_capacity;
         /** Time at which the base time got reset last
          */
         base::Time base_time;
         /** Offset at the last reset of base_time
          */
         base::Time base_time_reset_offset;
-
-        /** Last input time provided to the input estimator
+        /** Losses that have been announced using updateLoss, but have yet to be
+         * seen in the time stream
          */
-        base::Time time_raw;
-
-        /** Last reference time provided to the input estimator
+        int expected_losses;
+        /** The number of losses announced with updateLoss that got rejected by
+         * the estimator
          */
-        base::Time reference_time_raw;
+        int rejected_expected_losses;
+
+        TimestampStatus()
+            : lost_samples(0) {}
     };
 
     std::ostream& operator << (std::ostream& stream, TimestampStatus const& status)
     {
-        stream << "== Timestamp estimator status\n"
-            << "stamp: " << status.stamp.toString() << "\n"
-            << "period: " << status.period.toSeconds() << "\n"
-            << "latency: " << status.latency.toSeconds() << "\n"
-            << "window_time: " << status.window_time.toSeconds() << "\n"
-            << "capacity: " << status.capacity << "\n"
-            << "lost_samples: " << status.lost_samples << "\n"
-            << "lost_samples_total: " << status.lost_samples_total << "\n"
-            << "base_time: " << status.base_time.toString() << std::endl;
-        return stream;
+            stream << "== Timestamp Estimator Status\n"
+        << "stamp: " << status.stamp.toSeconds() << "\n"
+        << "period: " << status.period.toSeconds() << "\n"
+        << "latency: " << status.latency.toSeconds() << "\n"
+        << "lost_samples: " << status.lost_samples << "\n"
+        << "window_size: " << status.window_size << std::endl;
+         return stream;
     };
 }
 #endif

@@ -1,293 +1,505 @@
 #include "TimestampEstimator.hpp"
+#include <limits.h> //for INT_MAX
+#include <iosfwd>
+#include <stdexcept>
+#include <iostream>
+#include <base/Float.hpp>
+#include <base-logging/Logging.hpp>
 
 using namespace stream_aligner;
+using boost::circular_buffer;
 
-TimestampEstimator::TimestampEstimator(TimestampConfig &initial_config)
+TimestampEstimator::TimestampEstimator(base::Time window,
+				       base::Time initial_period,
+				       base::Time initial_latency,
+				       int lost_threshold)
 {
-    this->reset(initial_config);
+    reset(window, initial_period, initial_latency, lost_threshold);
 }
 
-void TimestampEstimator::reset(TimestampConfig &reset_config)
+TimestampEstimator::TimestampEstimator(base::Time window,
+				       base::Time initial_period,
+				       int lost_threshold)
 {
-    this->start_time = base::Time();
-    this->last_time = 0;
-    this->latency = reset_config.latency.toSeconds();
-    this->latency_raw = latency;
-    this->missing_samples_total = 0;
-    this->missing_samples = 0;
-    this->last_index = 0;
-    this->have_last_index = false;
-    this->last_reference = base::Time();
-    this->expected_losses = 0;
-    this->cumulative_expected_losses = 0;
-    this->expected_loss_timeout = 0;
-    this->base_time_reset = 0;
-    this->base_time_reset_offset = 0;
-    this->configuration.period = base::Time::fromSeconds(0.0); /** Period to zero as default **/
-    this->configuration = reset_config;
-    this->window_time = this->configuration.period.toSeconds() * this->buffer_samples.capacity();
-    this->buffer_samples.clear();
+    reset(window, initial_period, base::Time(), lost_threshold);
 }
 
-
-
-base::Time TimestampEstimator::update(base::Time ts)
+TimestampEstimator::TimestampEstimator(base::Time window,
+				       int lost_threshold)
 {
-    if (start_time.isNull())
+    reset(window, base::Time(), base::Time(), lost_threshold);
+}
+
+void TimestampEstimator::reset()
+{
+    internalReset(m_window,
+            m_initial_period,
+            m_initial_latency,
+            m_lost_threshold);
+}
+
+void TimestampEstimator::reset(base::Time window,
+				       int lost_threshold)
+{
+    internalReset(window.toSeconds(),
+            m_initial_period,
+            m_initial_latency,
+            lost_threshold);
+}
+
+void TimestampEstimator::reset(base::Time window,
+				       base::Time initial_period,
+				       int lost_threshold)
+{
+    internalReset(window.toSeconds(),
+            initial_period.toSeconds(),
+            m_initial_latency,
+            lost_threshold);
+}
+
+void TimestampEstimator::reset(base::Time window,
+				       base::Time initial_period,
+				       base::Time initial_latency,
+				       int lost_threshold)
+{
+    internalReset(window.toSeconds(),
+            initial_period.toSeconds(),
+            initial_latency.toSeconds(),
+            lost_threshold);
+}
+
+void TimestampEstimator::internalReset(double window,
+				       double initial_period,
+				       double initial_latency,
+				       int lost_threshold)
+{
+    m_last = 0;
+    m_got_full_window = false;
+    m_zero = base::Time();
+    m_window = window;
+    m_lost_threshold = lost_threshold;
+    m_lost.clear();
+    m_base_time_reset = 0;
+    m_base_time_reset_offset = 0;
+    m_last_reference = base::Time();
+    m_latency = initial_latency;
+    m_initial_latency = initial_latency;
+    m_initial_period = initial_period;
+    m_missing_samples = 0;
+    m_missing_samples_total = 0;
+    m_last_index = 0;
+    m_have_last_index = false;
+    m_expected_losses = 0;
+    m_rejected_expected_losses = 0;
+    m_expected_loss_timeout = 0;
+
+    m_samples.clear();
+    if (m_initial_period > 0)
+        m_samples.set_capacity(10 + (m_window + m_initial_period) / m_initial_period);
+    else
+        m_samples.set_capacity(20); // should be enough to get us a first period estimate
+}
+
+base::Time TimestampEstimator::getPeriod() const
+{ return base::Time::fromSeconds(getPeriodInternal()); }
+double TimestampEstimator::getPeriodInternal() const
+{
+    if (!m_got_full_window && m_initial_period)
     {
-        start_time = ts;
-    }
-
-    /** We use doubles internally. Convert to it. **/
-    double current = (ts - start_time).toSeconds();
-
-    /** Remove values from buffer_samples outside the window **/
-    this->shortSamples(current);
-
-    if (this->buffer_samples.empty())
-    {
-        this->resetBaseTime(current, current);
-        this->buffer_samples.push_back(current);
-        return base::Time::fromSeconds(this->last_time - this->latency) + this->start_time;
-    }
-
-    this->buffer_samples.push_back(current);
-
-    /**  Recompute the period **/
-    double period = this->getPeriod().toSeconds();
-
-    /** update the window time **/
-    this->window_time = this->buffer_samples.capacity() * period;
-
-    /** Check for lost samples
-
-    This is the distance, in periods, between the last received timestamp and
-    the one we just received
-
-    What m_lost_threshold represents is the number of samples that seem to be
-    lost that are required before we decide that we indeed did lose a sample.
-    This is made so that we are robust to losing a single sample even if
-    m_lost_threshold > 10 (for instance)
-
-    It is therefore also the number of calls to update() that are required
-    before we can detect a lost sample.
-    **/
-    if (this->expected_loss_timeout == 0)
-    {
-        this->cumulative_expected_losses += this->expected_losses;
-        this->expected_losses = 0;
+        // The main problem with using an initial period is that the estimator
+        // gets lost if the period is under-estimated.
+        //
+        // Other ways to handle the initial period:
+        //  * fill the sample set using the first sample and the period. In the
+        //    end, it will be equal to this solution plus
+        //    ((jitter_on_last_sample - jitter_on_very_first_sample) / window_size_in_periods)
+        //    Since the first sample, in this case, does not change, it skews
+        //    the period estimate for a complete first window
+        //  * compute the period using latest - (m_last - m_initial_period *
+        //    window_size_in_period). It is identical to this solution plus
+        //    jitter_on_current_sample / window_size_in_periods. This has a
+        //    randomness, but does not fix the behaviour if the initial period
+        //    is under-estimated.
+        //
+        // So, go for the simple solution and document for the user that the
+        // initial period should be very slightly over-estimated (if possible).
+        return m_initial_period;
     }
     else
-        --this->expected_loss_timeout;
+    {
+        int count = m_samples.size();
+        circular_buffer<double>::const_reverse_iterator latest_it;
+        //ignore lost samples(unset value) at the end of m_samples
+        for(latest_it = m_samples.rbegin();
+                (latest_it != m_samples.rend()) && base::isUnset(*latest_it);
+                latest_it++, count--)
+        {}
+        if (count <= 1)
+            throw std::logic_error("getPeriodInternal() called with no initial period and less than 2 valid samples");
+
+        double latest = *latest_it;
+        // m_samples.front() is valid as shortenSampleList makes sure that it is
+        double earliest = m_samples.front();
+
+        if (base::isUnset(latest))
+        {
+            dumpInternalState();
+            throw std::logic_error("getPeriodInternal(): latest == NaN");
+
+        }
+        else if (base::isUnset(earliest))
+        {
+            dumpInternalState();
+            throw std::logic_error("getPeriodInternal(): earliest == NaN");
+        }
+        return (latest - earliest) / (count - 1);
+    }
+}
+
+void TimestampEstimator::dumpInternalState() const
+{
+    std::cout << m_samples.size() << " samples in buffer" << std::endl;
+    std::cout << "  capacity=" << m_samples.capacity() << std::endl;
+    std::cout << "  m_missing_samples=" << m_missing_samples << std::endl;
+    std::cout << "  m_missing_samples_total=" << m_missing_samples_total << std::endl;
+    circular_buffer<double>::const_iterator it;
+    int count = 0;
+    for (it = m_samples.begin(); it != m_samples.end(); ++it)
+    {
+        std::cout << *it << std::endl;
+        if (base::isUnset(*it))
+            count++;
+    }
+    std::cout << "  found " << count << " unset samples in the buffer" << std::endl;
+}
+
+int TimestampEstimator::getLostSampleCount() const
+{ return m_missing_samples_total; }
+
+void TimestampEstimator::shortenSampleList(double current)
+{
+    if (haveEstimate())
+    {
+	// Compute the period up to now for later reuse
+	double period = getPeriodInternal();
+
+        //scan forward until we hit the window size, and unconditionally skip
+        //any lost samples queued at the end of sample list in the process
+        circular_buffer<double>::iterator end = m_samples.begin();
+	double min_time = current - m_window;
+	while(end != m_samples.end() && (base::isUnset(*end) || *end < min_time))
+        {
+            if (!base::isUnset(*end))
+                m_got_full_window = true;
+	    end++;
+        }
+
+        if (end == m_samples.end())
+        {
+            m_samples.clear();
+            m_missing_samples = 0;
+            return;
+        }
+
+        // window_begin is guaranteed to point to a valid sample
+        circular_buffer<double>::iterator window_begin = end;
+
+	//scan backward until we find a gap that is at least period sized.
+	//that should be the last sample from a burst, giving better
+	//period estimation
+        //
+        //The 0.9 factor on the period is here to allow a bit of jitter.
+        //Otherwise, we might end up keeping too much data for too long
+        circular_buffer<double>::iterator last_good = end;
+	int sample_count = 0;
+	while (end != m_samples.begin())
+	{
+	    if (!base::isUnset(*end))
+	    {
+		if (sample_count > 0 && (*last_good-*end) / sample_count >= 0.5 * period)
+		    break;
+
+		last_good = end;
+		sample_count = 0;
+	    }
+	    end--;
+	    sample_count++;
+	}
+
+	//if we didn't find anything, fall back to real window begin
+	if (end == m_samples.begin() || (*end < min_time - m_window))
+	    end = window_begin;
+
+        // Update the m_missing_samples counter
+        circular_buffer<double>::iterator it;
+	for(it = m_samples.begin(); it != end; it++) {
+	    if (base::isUnset(*it))
+		m_missing_samples--;
+	}
+
+	m_samples.erase(m_samples.begin(), end);
+    }
+
+    if (m_samples.size() == m_missing_samples)
+    {
+	m_samples.clear();
+	m_missing_samples = 0;
+    }
+}
+
+base::Time TimestampEstimator::update(base::Time time)
+{
+    if (m_zero.isNull())
+        m_zero = time;
+
+    // We use doubles internally. Convert to it.
+    double current = (time - m_zero).toSeconds();
+
+    // Remove values from m_samples that are outside the required window
+    shortenSampleList(current);
+
+    // If there are no samples so far, reinitialize the state of the estimator
+    if (m_samples.empty())
+    {
+        resetBaseTime(current, current);
+        m_samples.push_back(current);
+        return base::Time::fromSeconds(m_last - m_latency) + m_zero;
+    }
+
+    pushSample(current);
+
+    // Recompute the period
+    double period = getPeriodInternal();
+
+    // To avoid long-term effects of estimation errors, the base time must be
+    // updated at least once in a time window.
+    //
+    // In principle, it should not happen
+    if (current - m_base_time_reset > m_window)
+    {
+        double base_time = current;
+        double base_time_reset = current;
+        int base_count = 0;
+
+        circular_buffer<double>::const_reverse_iterator it = m_samples.rbegin();
+        // This code works as
+        //      *it < base_time - base_count * period,
+        // means that
+        //      *it + period > base_time - (base_count - 1) * period
+        // i.e. the sample at *it has a lower jitter than the one at base_time
+        // and we therefore should use it as the new base time
+        for (++it, ++base_count; it != m_samples.rend(); ++it, ++base_count)
+        {
+            if (!base::isUnset(*it) && (*it < base_time - base_count * period))
+            {
+                base_time = *it + base_count * period;
+                base_time_reset = *it;
+            }
+        }
+
+        resetBaseTime(base_time - period, base_time_reset);
+    }
+
+    // Check for lost samples
+    //
+    // This is the distance, in periods, between the last received timestamp and
+    // the one we just received
+    //
+    // What m_lost_threshold represents is the number of samples that seem to be
+    // lost that are required before we decide that we indeed did lose a sample.
+    // This is made so that we are robust to losing a single sample even if
+    // m_lost_threshold > 10 (for instance)
+    //
+    // It is therefore also the number of calls to update() that are required
+    // before we can detect a lost sample
+    if (m_expected_loss_timeout == 0)
+    {
+        m_rejected_expected_losses += m_expected_losses;
+        m_expected_losses = 0;
+    }
+    else
+        --m_expected_loss_timeout;
 
     int lost_count = 0;
-    if (this->expected_losses > 0)
+    if (m_expected_losses > 0)
     {
-        /** We calculate a different sample_distance. If we have some suspicion
-        that we did lose samples, we take timestamps that are at 1.9 * period
-        as distance=2 instead of 1 in the normal case.
-        **/
-        int sample_distance = (current - this->last_time + period * 0.1) / period;
+        // In principle, we should do both the expected_loss and m_lost
+        // detection at the same time. But it's complicated and I'm lazy, so I'd
+        // rather KISS it.
+
+        // We calculate a different sample_distance. If we have some suspicion
+        // that we did lose samples, we take timestamps that are at 1.9 * period
+        // as distance=2 instead of 1 in the normal case
+        int sample_distance = (current - m_last + period * 0.1) / period;
         if (sample_distance > 1)
         {
-            lost_count = std::min(sample_distance - 1, this->expected_losses);
-            this->expected_losses -= lost_count;
+            lost_count = std::min(sample_distance - 1, m_expected_losses);
+            m_expected_losses -= lost_count;
+        }
+    }
+    else if (m_lost_threshold != INT_MAX)
+    {
+        int sample_distance = (current - m_last) / period;
+        if (sample_distance > 1)
+        {
+            m_lost.push_back(sample_distance - 1);
+            if (static_cast<int>(m_lost.size()) > m_lost_threshold)
+                lost_count += *std::min_element(m_lost.begin(), m_lost.end());
         }
     }
 
     if (lost_count > 0)
     {
-        this->buffer_samples.pop_back();
+        m_samples.pop_back();
         for (int i = 0; i < lost_count; ++i)
         {
-            this->missing_samples++;
-            this->missing_samples_total++;
-            this->buffer_samples.push_back(base::unset<double>());
-            this->last_time += period;
+            m_missing_samples++;
+            m_missing_samples_total++;
+            pushSample(base::unset<double>());
+            m_last += period;
         }
-        this->buffer_samples.push_back(current);
+        pushSample(current);
+        m_lost.clear();
     }
 
-    /** last_time is tracking the current base time, i.e. the best estimate for the
-    next sample is always this->last_time + period
-
-    If this condition is true, it means that the current time stream is
-    actually too late (we are receiving a sample that is earlier than this->last_time
-    + period). We therefore need to update this->last_time to reflect that fact.
-
-    To avoid resetting the base time unnecessarily, consider that we
-    "reset" it as soon as we are within 1e-4 of it.
-    **/
-    if (this->last_time + period > current - period * 1e-4)
-        this->resetBaseTime(current, current);
+    // m_last is tracking the current base time, i.e. the best estimate for the
+    // next sample is always m_last + period
+    //
+    // If this condition is true, it means that the current time stream is
+    // actually too late (we are receiving a sample that is earlier than m_last
+    // + period). We therefore need to update m_last to reflect that fact.
+    //
+    // To avoid resetting the base time unnecessarily, consider that we
+    // "reset" it as soon as we are within 1e-4 of it.
+    if (m_last + period > current - period * 1e-4)
+        resetBaseTime(current, current);
     else
-        this->last_time = this->last_time + period;
+        m_last = m_last + period;
 
-    if (!this->last_reference.isNull())
-        this->latency_raw = this->last_time - (this->last_reference - this->start_time).toSeconds();
-    return base::Time::fromSeconds(this->last_time - this->latency) + this->start_time;
+    if (!m_last_reference.isNull())
+        m_latency_raw = m_last - (m_last_reference - m_zero).toSeconds();
+    return base::Time::fromSeconds(m_last - m_latency) + m_zero;
 }
 
-base::Time TimestampEstimator::update(base::Time ts, int64_t index)
+void TimestampEstimator::pushSample(double current)
 {
-    if (!this->have_last_index || index <= this->last_index)
+    // If we have an initial period, m_samples has been sized already. Since
+    // push_back will override the beginning of the circular buffer, there is
+    // nothing to do if the buffer is full
+    //
+    // If we don't have an initial period, however, we have to dynamically
+    // update its capacity using the current period estimate.
+    if (m_samples.full())
     {
-	    this->have_last_index = true;
-        this->last_index = index;
-        return update(ts);
-    }
-
-    int64_t lost = index - this->last_index - 1;
-    this->last_index = index;
-    while(lost > 0)
-    {
-	    lost--;
-	    updateLoss();
-    }
-    return this->update(ts);
-}
-void TimestampEstimator::updateLoss()
-{
-    this->expected_losses++;
-    this->expected_loss_timeout = 5;
-}
-
-void TimestampEstimator::updateReference(base::Time ts)
-{
-    if (!this->buffer_samples.full())
-        return;
-
-    double period = this->getPeriod().toSeconds();
-    double hw_time   = (ts - this->start_time).toSeconds();
-
-    /* Compute first the fractional part of the latency
-    Note that floor returns the integer that is smaller or equal to its
-    argument, so it works regardless of this->last_time <=> hw_time **/
-    double diff_int = floor((this->last_time - hw_time) / period);
-    double diff = this->last_time - (hw_time + diff_int * period);
-
-    /** Get the integral part of the latency from the current m_latency value
-     * **/
-    double latency_int = floor(this->latency / period);
-
-    this->latency = latency_int * period + diff;
-    this->last_reference = ts;
-}
-
-int TimestampEstimator::getLostSampleCount() const
-{
-    return this->missing_samples_total;
-}
-
-void TimestampEstimator::shortSamples(double current)
-{
-    if (this->haveEstimate())
-    {
-        double min_time = current - this->window_time;
-        if (this->buffer_samples.back() < min_time)
+        if (haveEstimate())
         {
-            this->buffer_samples.clear();
-            this->missing_samples = 0;
-            return;
+            double period = getPeriodInternal();
+            size_t new_capacity = 1.5 * (m_window + period) / period;
+            if (m_samples.capacity() < new_capacity)
+                m_samples.set_capacity(new_capacity);
+            else
+                m_samples.set_capacity(20 + m_samples.capacity());
         }
-
-        for (stream_aligner::cyclic_iterator<double, BUFFER_SIZE> it(this->buffer_samples);
-                it.itx() != it.end(); ++it)
+        else
         {
-            if (base::isUnset(*it))
-            {
-                this->missing_samples--;
-            }
+            m_samples.set_capacity(20 + m_samples.capacity());
         }
-
     }
 
-    if (this->buffer_samples.size() == this->missing_samples)
-    {
-        this->buffer_samples.clear();
-        this->missing_samples = 0;
-    }
-}
-
-base::Time TimestampEstimator::getPeriod() const
-{
-    if (this->buffer_samples.empty())
-    {
-        return this->configuration.period;
-    }
-
-    else
-    {
-        double latest = this->buffer_samples.back();
-        double earliest = this->buffer_samples.front();
-
-        if (base::isUnset(latest))
-        {
-            return this->configuration.period;
-        }
-        else if (base::isUnset(earliest))
-        {
-            return this->configuration.period;
-        }
-
-        double period = (latest - earliest) / static_cast<double>(this->buffer_samples.size()-1.0);
-
-        /** return the period **/
-        return base::Time::fromSeconds(period);
-    }
-}
-
-
-bool TimestampEstimator::haveEstimate() const
-{
-    if (this->configuration.period.toSeconds())
-        return (this->buffer_samples.size() - this->missing_samples) >= 1;
-    else
-        return (this->buffer_samples.size() - this->missing_samples) >= 2;
-}
-
-base::Time TimestampEstimator::getLatency() const
-{
-    return base::Time::fromSeconds(this->latency);
-}
-
-
-TimestampStatus TimestampEstimator::getStatus() const
-{
-    /** Current status values **/
-    TimestampStatus status;
-
-    status.stamp = base::Time::fromSeconds(this->last_time - this->latency) + this->start_time;
-    status.period = this->getPeriod();
-    status.latency = this->getLatency();
-    status.window_time = base::Time::fromSeconds(this->window_time);
-    status.capacity = this->buffer_samples.capacity();
-    status.lost_samples = this->missing_samples;
-    status.lost_samples_total = this->missing_samples_total;
-    status.base_time = base::Time::fromSeconds(this->base_time_reset) + this->start_time;
-    status.base_time_reset_offset = base::Time::fromSeconds(this->base_time_reset_offset);
-
-    if (this->buffer_samples.empty())
-    {
-        status.time_raw = base::Time();
-    }
-    else
-    {
-      status.time_raw = base::Time::fromSeconds(this->buffer_samples.back()) + this->start_time;
-    }
-
-    status.reference_time_raw = this->last_reference;
-
-    return status;
+    // Add the new input to the sample set
+    m_samples.push_back(current);
 }
 
 void TimestampEstimator::resetBaseTime(double new_value, double reset_time)
 {
-    if (this->last_time != 0)
-        this->base_time_reset_offset = new_value - this->last_time;
-    this->last_time = new_value;
-    this->base_time_reset = reset_time;
-    if (!this->last_reference.isNull())
-        this->updateReference(this->last_reference);
+    if (m_last != 0)
+        m_base_time_reset_offset = new_value - m_last;
+    m_last = new_value;
+    m_base_time_reset = reset_time;
+    if (!m_last_reference.isNull())
+        updateReference(m_last_reference);
+}
+
+void TimestampEstimator::updateLoss()
+{
+    m_expected_losses++;
+    m_expected_loss_timeout = 10;
+}
+
+void TimestampEstimator::updateReference(base::Time ts)
+{
+    if (!m_got_full_window)
+	return;
+
+    double period = getPeriodInternal();
+    double hw_time   = (ts - m_zero).toSeconds();
+
+    // Compute first the fractional part of the latency
+    //
+    // Note that floor returns the integer that is smaller or equal to its
+    // argument, so it works regardless of m_last <=> hw_time
+    double diff_int = floor((m_last - hw_time) / period);
+    double diff = m_last - (hw_time + diff_int * period);
+
+    // Get the integral part of the latency from the current m_latency value
+    double latency_int = floor(m_latency / period);
+
+    m_latency = latency_int * period + diff;
+    m_last_reference = ts;
+}
+
+bool TimestampEstimator::haveEstimate() const
+{
+    if (m_initial_period)
+        return (m_samples.size() - m_missing_samples) >= 1;
+    else
+        return (m_samples.size() - m_missing_samples) >= 2;
+}
+
+base::Time TimestampEstimator::update(base::Time time, int64_t index)
+{
+    if (!m_have_last_index || index <= m_last_index)
+    {
+	m_have_last_index = true;
+        m_last_index = index;
+        return update(time);
+    }
+
+    int64_t lost = index - m_last_index - 1;
+    m_last_index = index;
+    while(lost > 0)
+    {
+	lost--;
+	updateLoss();
+    }
+    return update(time);
+}
+
+base::Time TimestampEstimator::getLatency() const
+{
+    return base::Time::fromSeconds(m_latency);
+}
+
+TimestampStatus TimestampEstimator::getStatus() const
+{
+    stream_aligner::TimestampStatus status;
+    status.stamp = base::Time::fromSeconds(m_last - m_latency) + m_zero;
+    status.period = getPeriod();
+    status.latency = getLatency();
+    status.lost_samples = m_missing_samples;
+    status.lost_samples_total = m_missing_samples_total;
+    status.expected_losses = m_expected_losses;
+    status.rejected_expected_losses = m_rejected_expected_losses;
+    status.window_size = m_samples.size();
+    status.window_capacity = m_samples.capacity();
+    status.base_time = base::Time::fromSeconds(m_base_time_reset) + m_zero;
+    status.base_time_reset_offset = base::Time::fromSeconds(m_base_time_reset_offset);
+    if (m_samples.empty())
+        status.time_raw = base::Time();
+    else
+        status.time_raw = base::Time::fromSeconds(m_samples.back()) + m_zero;
+
+    status.reference_time_raw = m_last_reference;
+    return status;
 }
 

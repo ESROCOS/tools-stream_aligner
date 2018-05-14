@@ -118,12 +118,12 @@ public:
     {
         addResultToPlot(estimated_time, estimated_period);
 
-        if ((std::abs((estimated_time - real_time).toSeconds()) > this->actual_period.toSeconds() / 10))
+        if (((estimated_time - real_time).toSeconds()) > this->actual_period.toSeconds() / 10)
         {
             std::cout<<"estimated time: "<<estimated_time.toString()<<" real time: "<<real_time.toString()<<"\n";
         }
 
-        BOOST_CHECK_SMALL(std::abs((estimated_time - real_time).toSeconds()), this->actual_period.toSeconds() / 10);
+        BOOST_CHECK_SMALL((estimated_time - real_time).toSeconds(), this->actual_period.toSeconds() / 10);
     }
 };
 
@@ -181,8 +181,7 @@ void test_timestamper_impl(int hardware_order, bool has_initial_period, bool has
         initial_period = base::Time::fromSeconds(0.025);
 
     /** estimator for testing **/
-    stream_aligner::TimestampConfig config(base::Time::fromSeconds(20), initial_period);
-    stream_aligner::TimestampEstimator estimator(config);
+    stream_aligner::TimestampEstimator estimator(base::Time::fromSeconds(20), initial_period);
 
     std::cout<<"== START == "<<estimator.getStatus()<<"\n";
 
@@ -226,8 +225,7 @@ BOOST_AUTO_TEST_CASE(test_perfect_stream)
     base::Time time = base::Time::now();
     base::Time step = base::Time::fromSeconds(0.01);
 
-    stream_aligner::TimestampConfig config(base::Time::fromSeconds(2), base::Time::fromSeconds(0));
-    stream_aligner::TimestampEstimator estimator(config);
+    stream_aligner::TimestampEstimator estimator(base::Time::fromSeconds(2), 0);
     for (int i = 0; i < 10000; ++i)
     {
         time = time + step;

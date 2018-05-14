@@ -14,6 +14,9 @@ namespace stream_aligner
         static const size_t  BUFFER_SIZE = 100;
 
     protected:
+        typedef CircularArray<double, BUFFER_SIZE> Buffer;
+
+    protected:
         /** To avoid loss of precision while manipulating doubles, we move all
         * times to be relative to this time
         *
@@ -99,7 +102,7 @@ namespace stream_aligner
         TimestampConfig configuration;
 
         /** The buffer of samples **/
-        CircularArray<double, BUFFER_SIZE> samples;
+        Buffer buffer_samples;
 
     public:
         /** Constructor

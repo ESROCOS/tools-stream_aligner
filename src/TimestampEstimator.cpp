@@ -25,8 +25,8 @@ void TimestampEstimator::reset(TimestampConfig &reset_config)
     this->base_time_reset_offset = 0;
     this->configuration.period = base::Time::fromSeconds(0.0); /** Period to zero as default **/
     this->configuration = reset_config;
-    this->window_time = this->configuration.period.toSeconds() * this->samples.capacity();
-    this->samples.clear();
+    this->window_time = this->configuration.period.toSeconds() * this->buffer_samples.capacity();
+    this->buffer_samples.clear();
 }
 
 
@@ -41,23 +41,23 @@ base::Time TimestampEstimator::update(base::Time ts)
     /** We use doubles internally. Convert to it. **/
     double current = (ts - start_time).toSeconds();
 
-    /** Remove values outside the window **/
+    /** Remove values from buffer_samples outside the window **/
     this->shortSamples(current);
 
-    if (this->samples.empty())
+    if (this->buffer_samples.empty())
     {
         this->resetBaseTime(current, current);
-        this->samples.push_back(current);
+        this->buffer_samples.push_back(current);
         return base::Time::fromSeconds(this->last_time - this->latency) + this->start_time;
     }
 
-    this->samples.push_back(current);
+    this->buffer_samples.push_back(current);
 
     /**  Recompute the period **/
     double period = this->getPeriod().toSeconds();
 
     /** update the window time **/
-    this->window_time = this->samples.capacity() * period;
+    this->window_time = this->buffer_samples.capacity() * period;
 
     /** Check for lost samples
 
@@ -97,15 +97,15 @@ base::Time TimestampEstimator::update(base::Time ts)
 
     if (lost_count > 0)
     {
-        this->samples.pop_back();
+        this->buffer_samples.pop_back();
         for (int i = 0; i < lost_count; ++i)
         {
             this->missing_samples++;
             this->missing_samples_total++;
-            this->samples.push_back(base::unset<double>());
+            this->buffer_samples.push_back(base::unset<double>());
             this->last_time += period;
         }
-        this->samples.push_back(current);
+        this->buffer_samples.push_back(current);
     }
 
     /** last_time is tracking the current base time, i.e. the best estimate for the
@@ -154,7 +154,7 @@ void TimestampEstimator::updateLoss()
 
 void TimestampEstimator::updateReference(base::Time ts)
 {
-    if (!this->samples.full())
+    if (!this->buffer_samples.full())
         return;
 
     double period = this->getPeriod().toSeconds();
@@ -184,14 +184,14 @@ void TimestampEstimator::shortSamples(double current)
     if (this->haveEstimate())
     {
         double min_time = current - this->window_time;
-        if (this->samples.back() < min_time)
+        if (this->buffer_samples.back() < min_time)
         {
-            this->samples.clear();
+            this->buffer_samples.clear();
             this->missing_samples = 0;
             return;
         }
 
-        for (stream_aligner::cyclic_iterator<double, BUFFER_SIZE> it(this->samples);
+        for (stream_aligner::cyclic_iterator<double, BUFFER_SIZE> it(this->buffer_samples);
                 it.itx() != it.end(); ++it)
         {
             if (base::isUnset(*it))
@@ -202,24 +202,24 @@ void TimestampEstimator::shortSamples(double current)
 
     }
 
-    if (this->samples.size() == this->missing_samples)
+    if (this->buffer_samples.size() == this->missing_samples)
     {
-        this->samples.clear();
+        this->buffer_samples.clear();
         this->missing_samples = 0;
     }
 }
 
 base::Time TimestampEstimator::getPeriod() const
 {
-    if (this->samples.empty())
+    if (this->buffer_samples.empty())
     {
         return this->configuration.period;
     }
 
     else
     {
-        double latest = samples.back();
-        double earliest = samples.front();
+        double latest = this->buffer_samples.back();
+        double earliest = this->buffer_samples.front();
 
         if (base::isUnset(latest))
         {
@@ -230,7 +230,7 @@ base::Time TimestampEstimator::getPeriod() const
             return this->configuration.period;
         }
 
-        double period = (latest - earliest) / static_cast<double>(samples.size()-1.0);
+        double period = (latest - earliest) / static_cast<double>(this->buffer_samples.size()-1.0);
 
         /** return the period **/
         return base::Time::fromSeconds(period);
@@ -241,9 +241,9 @@ base::Time TimestampEstimator::getPeriod() const
 bool TimestampEstimator::haveEstimate() const
 {
     if (this->configuration.period.toSeconds())
-        return (this->samples.size() - this->missing_samples) >= 1;
+        return (this->buffer_samples.size() - this->missing_samples) >= 1;
     else
-        return (this->samples.size() - this->missing_samples) >= 2;
+        return (this->buffer_samples.size() - this->missing_samples) >= 2;
 }
 
 base::Time TimestampEstimator::getLatency() const
@@ -261,19 +261,19 @@ TimestampStatus TimestampEstimator::getStatus() const
     status.period = this->getPeriod();
     status.latency = this->getLatency();
     status.window_time = base::Time::fromSeconds(this->window_time);
-    status.capacity = this->samples.capacity();
+    status.capacity = this->buffer_samples.capacity();
     status.lost_samples = this->missing_samples;
     status.lost_samples_total = this->missing_samples_total;
     status.base_time = base::Time::fromSeconds(this->base_time_reset) + this->start_time;
     status.base_time_reset_offset = base::Time::fromSeconds(this->base_time_reset_offset);
 
-    if (this->samples.empty())
+    if (this->buffer_samples.empty())
     {
         status.time_raw = base::Time();
     }
     else
     {
-      status.time_raw = base::Time::fromSeconds(this->samples.back()) + this->start_time;
+      status.time_raw = base::Time::fromSeconds(this->buffer_samples.back()) + this->start_time;
     }
 
     status.reference_time_raw = this->last_reference;

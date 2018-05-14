@@ -191,7 +191,7 @@ namespace stream_aligner
 
        /** rend
         *
-        * The element preceding the first element in the vector
+        * The element preceding the first element in the array
         * (which is considered its reverse end).
         * */
         T* rend()

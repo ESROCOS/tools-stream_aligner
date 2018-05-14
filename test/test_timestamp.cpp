@@ -245,8 +245,40 @@ BOOST_AUTO_TEST_CASE(test_perfect_stream)
 
 BOOST_AUTO_TEST_CASE(test_timestamper__plain)
 { test_timestamper_impl(0, false, false, 1000, 0); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period)
+{ test_timestamper_impl(-1, true, false, 0, 0); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before)
+{ test_timestamper_impl(-1, false, false, 1000, 0); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_after__initial_period)
+{ test_timestamper_impl(1, true, false, 0, 0); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_after)
+{ test_timestamper_impl(1, false, false, 1000, 0); }
+BOOST_AUTO_TEST_CASE(test_timestamper__initial_period)
+{ test_timestamper_impl(0, true, false, 0, 0); }
 
-/*BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period)
-{ test_timestamper_impl(-1, true, false, 0, 0); }*/
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period__loss_updateLoss)
+{ test_timestamper_impl(-1, true, false, 0, 0.01, USE_UPDATE_LOSS); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__loss_updateLoss)
+{ test_timestamper_impl(-1, false, false, 1000, 0.01, USE_UPDATE_LOSS); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_after__initial_period__loss_updateLoss)
+{ test_timestamper_impl(1, true, false, 0, 0.01, USE_UPDATE_LOSS); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_after__loss_updateLoss)
+{ test_timestamper_impl(1, false, false, 1000, 0.01, USE_UPDATE_LOSS); }
+BOOST_AUTO_TEST_CASE(test_timestamper__initial_period__loss_updateLoss)
+{ test_timestamper_impl(0, true, false, 0, 0.01, USE_UPDATE_LOSS); }
+BOOST_AUTO_TEST_CASE(test_timestamper__loss_updateLoss)
+{ test_timestamper_impl(0, false, false, 1000, 0.01, USE_UPDATE_LOSS); }
 
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__initial_period__loss_index)
+{ test_timestamper_impl(-1, true, false, 0, 0.01, USE_INDEX); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_before__loss_index)
+{ test_timestamper_impl(-1, false, false, 1000, 0.01, USE_INDEX); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_after__initial_period__loss_index)
+{ test_timestamper_impl(1, true, false, 0, 0.01, USE_INDEX); }
+BOOST_AUTO_TEST_CASE(test_timestamper__hw_after__loss_index)
+{ test_timestamper_impl(1, false, false, 1000, 0.01, USE_INDEX); }
+BOOST_AUTO_TEST_CASE(test_timestamper__initial_period__loss_index)
+{ test_timestamper_impl(0, true, false, 0, 0.01, USE_INDEX); }
+BOOST_AUTO_TEST_CASE(test_timestamper__loss_index)
+{ test_timestamper_impl(0, false, false, 1000, 0.01, USE_INDEX); }
 

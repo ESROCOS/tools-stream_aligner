@@ -14,6 +14,8 @@
 
 using namespace stream_aligner;
 
+static const size_t NUMBER_OF_STREAMS = 10;
+
 std::string last_sample;
 
 void test_callback( const base::Time &time, const std::string& sample )
@@ -25,248 +27,256 @@ void test_callback( const base::Time &time, const std::string& sample )
 
 BOOST_AUTO_TEST_CASE(order_test)
 {
+    const size_t N = 4;
     std::cout<<"\n*** STREAM_ALIGNER [TEST 1] ***\n";
-    stream_aligner::StreamAligner reader; 
-    reader.setTimeout( base::Time::fromSeconds(2.0) );
+    stream_aligner::StreamAligner<NUMBER_OF_STREAMS> aligner; 
+    aligner.setTimeout( base::Time::fromSeconds(2.0) );
 
     /** callback, period_time, (optional) priority **/
-    int s1 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2)); 
-    int s2 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2), 1);
+    int s1 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2)); 
+    int s2 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2), 1);
 
     /** Stream 1 **/
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(1.0), std::string("a"));
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(3.0), std::string("c"));
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(4.0), std::string("e"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(1.0), std::string("a"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(3.0), std::string("c"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(4.0), std::string("e"));
 
     /** Stream 2 **/
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(2.0), std::string("b"));
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(3.0), std::string("d"));
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(4.0), std::string("f"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(2.0), std::string("b"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(3.0), std::string("d"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(4.0), std::string("f"));
 
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "a" );
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "b" );
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "c" );
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "d" );
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "e" );
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "f" );
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK( last_sample == "" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "a" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "b" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "c" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "d" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "e" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "f" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK( last_sample == "" );
 }
 
 /** test case for enabling/disabling streams **/
 BOOST_AUTO_TEST_CASE(stream_enable_test)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 2] ***\n";
-    StreamAligner reader; 
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner; 
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, period_time, (optional) priority **/
-    int s1 = reader.registerStream<std::string, 4>( &test_callback, base::Time::fromSeconds(1.0)); 
-    int s2 = reader.registerStream<std::string, 4>( &test_callback, base::Time::fromSeconds(0), 1);
+    const size_t N = 4;
+    int s1 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(1.0)); 
+    int s2 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(0), 1);
 
-    reader.push<std::string, 4>( s1, base::Time::fromSeconds(1.0), std::string("a")); 
-    reader.push<std::string, 4>( s2, base::Time::fromSeconds(2.0), std::string("b")); 
+    aligner.push<std::string, N>( s1, base::Time::fromSeconds(1.0), std::string("a")); 
+    aligner.push<std::string, N>( s2, base::Time::fromSeconds(2.0), std::string("b")); 
 
-    BOOST_CHECK(reader.isStreamActive(s2) == true);
-    reader.disableStream(s2);
-    BOOST_CHECK(reader.isStreamActive(s2) == false);
+    BOOST_CHECK(aligner.isStreamActive(s2) == true);
+    aligner.disableStream(s2);
+    BOOST_CHECK(aligner.isStreamActive(s2) == false);
 
     /** we should still be able to read out the disabled stream **/
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(3.0), std::string("c"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(3.0), std::string("c"));
 
     /** since s2 is disabled, we directly get c, without waiting for the timout **/
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "c");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "c");
 
     /** this should reenable s2 **/
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(4.0), std::string("d")); 
-    BOOST_CHECK(reader.isStreamActive(s2) == true);
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(5.0), std::string("e")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(4.0), std::string("d")); 
+    BOOST_CHECK(aligner.isStreamActive(s2) == true);
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(5.0), std::string("e")); 
 
     /** and we get the s2 sample **/
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "d");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "d");
 
     /** but have to wait for the next s1 sample, since timout is not over **/
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 }
 
 BOOST_AUTO_TEST_CASE(clear_test)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 3] ***\n";
-    StreamAligner reader;
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, period_time, (optional) priority **/
-    int s1 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2));
-    int s2 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2), 1);
+    const size_t N = 4;
+    int s1 = aligner.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2));
+    int s2 = aligner.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2), 1);
 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(1.0), std::string("a"));
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(3.0), std::string("c"));
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(2.0), std::string("b"));
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(3.0), std::string("d"));
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(4.0), std::string("f"));
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(4.0), std::string("e"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(1.0), std::string("a"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(3.0), std::string("c"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(2.0), std::string("b"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(3.0), std::string("d"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(4.0), std::string("f"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(4.0), std::string("e"));
 
-    reader.clear();
+    aligner.clear();
 
-    std::cout << reader.getStatus() << std::endl;
+    std::cout << aligner.getStatus() << std::endl;
 
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(1.0), std::string("a")); 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(3.0), std::string("c")); 
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(2.0), std::string("b")); 
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(3.0), std::string("d")); 
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(4.0), std::string("f")); 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(4.0), std::string("e")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(1.0), std::string("a")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(3.0), std::string("c")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(2.0), std::string("b")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(3.0), std::string("d")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(4.0), std::string("f")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(4.0), std::string("e")); 
 
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "b");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "c");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "d");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "e");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "f");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "" );
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "c");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "d");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "e");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "f");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "" );
 }
 
 BOOST_AUTO_TEST_CASE(remove_stream)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 4] ***\n";
-    StreamAligner reader; 
-    reader.setTimeout( base::Time::fromSeconds(2.0) );
+    StreamAligner<NUMBER_OF_STREAMS> aligner; 
+    aligner.setTimeout( base::Time::fromSeconds(2.0) );
 
     /** callback, period_time, (optional) priority **/
-    int s1 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2));
-    int s3 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2));
-    int s2 = reader.registerStream<std::string, 4>(&test_callback, base::Time::fromSeconds(2), 1);
+    const size_t N = 4;
+    int s1 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2));
+    int s3 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2));
+    int s2 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2), 1);
 
-    reader.push<std::string, 4>(s3, base::Time::fromSeconds(1.0), std::string("a")); 
+    aligner.push<std::string, N>(s3, base::Time::fromSeconds(1.0), std::string("a")); 
 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(1.0), std::string("a")); 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(3.0), std::string("c")); 
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(2.0), std::string("b")); 
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(3.0), std::string("d")); 
-    reader.push<std::string, 4>(s2, base::Time::fromSeconds(4.0), std::string("f")); 
-    reader.push<std::string, 4>(s1, base::Time::fromSeconds(4.0), std::string("e")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(1.0), std::string("a")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(3.0), std::string("c")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(2.0), std::string("b")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(3.0), std::string("d")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(4.0), std::string("f")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(4.0), std::string("e")); 
 
-    reader.unregisterStream(s3);
-    std::cout << reader.getStatus() << std::endl;
+    aligner.unregisterStream(s3);
+    std::cout << aligner.getStatus() << std::endl;
 
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "b");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "c");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "d");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "e");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "f");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "c");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "d");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "e");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "f");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 
-    int s3_new = reader.registerStream<std::string, 4>( &test_callback, base::Time::fromSeconds(2)); 
+    int s3_new = aligner.registerStream<std::string, 4>( &test_callback, base::Time::fromSeconds(2)); 
     BOOST_CHECK(s3 == s3_new);
 }
 
 BOOST_AUTO_TEST_CASE(drop_test)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 5] ***\n";
-    StreamAligner reader;
-    reader.setTimeout( base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout( base::Time::fromSeconds(2.0));
 
     /** callback, period_time **/
-    int s1 = reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(2,0));
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2,0));
 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(10.0), std::string("a"));
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(11.0), std::string("b"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(10.0), std::string("a"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(11.0), std::string("b"));
 
     /** The behaviour of the streamaligner has changed here.  Out of order
      samples don't throw anymore, but will be discarded and counted.
-     BOOST_REQUIRE_THROW(reader.push( s1, base::Time::fromSeconds(10.0), std::string("3") ), std::runtime_error); **/
+     BOOST_REQUIRE_THROW(aligner.push( s1, base::Time::fromSeconds(10.0), std::string("3") ), std::runtime_error); **/
 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(10.0), std::string("3"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(10.0), std::string("3"));
 
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "b");
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 }
 
 BOOST_AUTO_TEST_CASE(copy_state_test)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 6] ***\n";
-    StreamAligner reader; 
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner; 
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, period_time **/
-    int s1 = reader.registerStream<std::string, 5>( &test_callback, base::Time::fromSeconds(2,0)); 
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(2,0)); 
 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(10.0), std::string("a"));
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(11.0), std::string("b"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(10.0), std::string("a"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(11.0), std::string("b"));
 
-    StreamAligner reader2;
-    reader2.registerStream<std::string, 5>( &test_callback, base::Time::fromSeconds(2,0) ); 
-    reader2.copyState(reader);
+    StreamAligner<NUMBER_OF_STREAMS> aligner2;
+    aligner2.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(2,0) ); 
+    aligner2.copyState(aligner);
 
-    BOOST_CHECK(reader.getLatency().toSeconds() == reader2.getLatency().toSeconds());
+    BOOST_CHECK(aligner.getLatency().toSeconds() == aligner2.getLatency().toSeconds());
 
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "b");
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 
-    last_sample = ""; reader2.step<std::string, 5>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader2.step<std::string, 5>(); BOOST_CHECK(last_sample == "b");
-    last_sample = ""; reader2.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner2.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner2.step<std::string>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner2.step<std::string>(); BOOST_CHECK(last_sample == "");
 }
 
 BOOST_AUTO_TEST_CASE(data_on_same_time_zero_lookahead)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 7] ***\n";
-    StreamAligner reader;
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, period_time **/
-    int s1 = reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(2,0) );
-    int s2 = reader.registerStream<std::string, 5>(&test_callback, base::Time() );
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2,0) );
+    int s2 = aligner.registerStream<std::string, N>(&test_callback, base::Time() );
 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(2.0), std::string("a"));
-    reader.push<std::string, 5>(s2, base::Time::fromSeconds(2.0), std::string("b"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(2.0), std::string("a"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(2.0), std::string("b"));
 
     last_sample = "";
-    reader.step<std::string, 5>();
+    aligner.step<std::string>();
     BOOST_CHECK( last_sample == "a" );
     last_sample = "";
-    reader.step<std::string, 5>();
+    aligner.step<std::string>();
     BOOST_CHECK( last_sample == "b" );
 }
 
 BOOST_AUTO_TEST_CASE( data_on_same_time_zero_lookahead_advanced )
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 8] ***\n";
-    StreamAligner reader;
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, buffer_size, period_time **/
-    int s1 = reader.registerStream<std::string, 5>( &test_callback, base::Time::fromSeconds(2,0));
-    int s2 = reader.registerStream<std::string, 5>( &test_callback, base::Time());
-    int s3 = reader.registerStream<std::string, 5>( &test_callback, base::Time());
-    int s4 = reader.registerStream<std::string, 5>( &test_callback, base::Time());
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(2,0));
+    int s2 = aligner.registerStream<std::string, N>( &test_callback, base::Time());
+    int s3 = aligner.registerStream<std::string, N>( &test_callback, base::Time());
+    int s4 = aligner.registerStream<std::string, N>( &test_callback, base::Time());
 
-    reader.push<std::string, 5>(s4, base::Time::fromSeconds(2.0), std::string("d")); 
-    reader.push<std::string, 5>(s3, base::Time::fromSeconds(2.0), std::string("c")); 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(2.0), std::string("a")); 
-    reader.push<std::string, 5>(s2, base::Time::fromSeconds(2.0), std::string("b")); 
+    aligner.push<std::string, N>(s4, base::Time::fromSeconds(2.0), std::string("d")); 
+    aligner.push<std::string, N>(s3, base::Time::fromSeconds(2.0), std::string("c")); 
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(2.0), std::string("a")); 
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(2.0), std::string("b")); 
 
     last_sample = "";
-    reader.step<std::string, 5>();
+    aligner.step<std::string>();
     BOOST_CHECK(last_sample != "");
 
     last_sample = "";
-    reader.step<std::string, 5>();
+    aligner.step<std::string>();
     BOOST_CHECK( last_sample != "" );
 
     last_sample = "";
-    reader.step<std::string, 5>();
+    aligner.step<std::string>();
     BOOST_CHECK( last_sample != "" );
 
     last_sample = "";
-    reader.step<std::string, 5>();
+    aligner.step<std::string>();
     BOOST_CHECK( last_sample != "" );
 }
 
@@ -274,14 +284,15 @@ BOOST_AUTO_TEST_CASE( data_on_same_time_zero_lookahead_advanced )
 BOOST_AUTO_TEST_CASE(get_status)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 9] ***\n";
-    StreamAligner reader;
-    reader.setTimeout( base::Time::fromSeconds(2.0) );
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout( base::Time::fromSeconds(2.0) );
 
     /** callback, period_time **/
-    reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(2,0));
-    reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(0,0));
+    const size_t N = 5;
+    aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2,0));
+    aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(0,0));
 
-    std::cout << reader.getStatus();
+    std::cout << aligner.getStatus();
 }
 
 /**
@@ -291,17 +302,18 @@ BOOST_AUTO_TEST_CASE(get_status)
 BOOST_AUTO_TEST_CASE( data_on_one_stream_test )
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 10] ***\n";
-    StreamAligner reader;
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, period_time **/
-    reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(2,0)); 
-    int s2 = reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(0,0)); 
+    const size_t N = 5;
+    aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(2,0)); 
+    int s2 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(0,0)); 
 
-    reader.push<std::string, 5>(s2, base::Time::fromSeconds(1.0), std::string("a"));
+    aligner.push<std::string, 5>(s2, base::Time::fromSeconds(1.0), std::string("a"));
 
     /** instant replay, as perios of s2 is zero **/
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
 }
 
 /**
@@ -312,19 +324,20 @@ BOOST_AUTO_TEST_CASE( data_on_one_stream_test )
 BOOST_AUTO_TEST_CASE(newer_data_first_init_case)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 11] ***\n";
-    StreamAligner reader; 
-    reader.setTimeout( base::Time::fromSeconds(2.0) );
+    StreamAligner<NUMBER_OF_STREAMS> aligner; 
+    aligner.setTimeout( base::Time::fromSeconds(2.0) );
 
     /** callback, period_time **/
-    int s1 = reader.registerStream<std::string, 5>( &test_callback, base::Time::fromSeconds(2,0));
-    int s2 = reader.registerStream<std::string, 5>( &test_callback, base::Time::fromSeconds(0,0));
-    reader.push<std::string, 5>( s1, base::Time::fromSeconds(1.1), std::string("b"));
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(2,0));
+    int s2 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(0,0));
+    aligner.push<std::string, N>( s1, base::Time::fromSeconds(1.1), std::string("b"));
 
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 
-    reader.push<std::string, 5>(s2, base::Time::fromSeconds(1.0), std::string("a"));
+    aligner.push<std::string, N>(s2, base::Time::fromSeconds(1.0), std::string("a"));
 
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
 }
 
 /**
@@ -335,27 +348,69 @@ BOOST_AUTO_TEST_CASE(newer_data_first_init_case)
 BOOST_AUTO_TEST_CASE(advanced_timeout)
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 12] ***\n";
-    StreamAligner reader;
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     /** callback, period_time **/
-    int s1 = reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(1,0));
-    reader.registerStream<std::string, 5>(&test_callback, base::Time::fromSeconds(0,0));
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(1,0));
+    aligner.registerStream<std::string, N>(&test_callback, base::Time::fromSeconds(0,0));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(1.0), std::string("a"));
 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(1.0), std::string("a"));
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(1.1), std::string("b"));
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(1.1), std::string("b"));
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
-
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(3.1),std::string("c"));
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "b");
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "c");
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(3.1),std::string("c"));
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "c");
 
     /** bigger than period, bus smaller than timeout, do not replay **/
-    reader.push<std::string, 5>(s1, base::Time::fromSeconds(4.2), std::string("d"));
-    last_sample = ""; reader.step<std::string, 5>(); BOOST_CHECK(last_sample == "");
+    aligner.push<std::string, N>(s1, base::Time::fromSeconds(4.2), std::string("d"));
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 }
+
+
+BOOST_AUTO_TEST_CASE(maximum_number_streams)
+{
+    std::cout<<"\n*** STREAM_ALIGNER [TEST 13] ***\n";
+    static const size_t NUMBER_OF_STREAMS = 4;
+    StreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
+
+    /** callback, buffer_size, period_time **/
+    const size_t N = 5;
+    int s1 = aligner.registerStream<std::string, N>( &test_callback, base::Time::fromSeconds(2,0)); BOOST_CHECK(s1 != -1);
+    int s2 = aligner.registerStream<std::string, N>( &test_callback, base::Time()); BOOST_CHECK(s2 != -1);
+    int s3 = aligner.registerStream<std::string, N>( &test_callback, base::Time()); BOOST_CHECK(s3 != -1);
+    int s4 = aligner.registerStream<std::string, N>( &test_callback, base::Time()); BOOST_CHECK(s4 != -1);
+    int s5 = -1;
+    try
+    {
+        s5 = aligner.registerStream<std::string, N>( &test_callback, base::Time());
+    }
+    catch(const std::exception& e)
+    {
+        std::cout<<"FULL SIZE: Exception expected!!\n";
+        BOOST_CHECK(s5 == -1);
+    }
+    aligner.unregisterStream(s3);
+
+    s5 = aligner.registerStream<std::string, N>( &test_callback, base::Time());
+    BOOST_CHECK(s5 == s3);
+    int s6 = -1;
+    try
+    {
+        s6 = aligner.registerStream<std::string, N>( &test_callback, base::Time());
+    }
+    catch(const std::exception& e)
+    {
+        std::cout<<"FULL SIZE: Exception expected!!\n";
+        BOOST_CHECK(s6 == -1);
+    }
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
+}
+
 
 template <class T>
 struct pull_object
@@ -364,21 +419,21 @@ struct pull_object
 
     void setNext(base::Time ts, const T& next)
     {
-	next_ts = ts;
-	next_value = next;
-	hasNext = true;
+        next_ts = ts;
+        next_value = next;
+        hasNext = true;
     }
 
     bool getNext(base::Time& ts, T& next)
     {
-	if( hasNext )
-	{
-	    next = next_value;
-	    ts = next_ts;
-	    hasNext = false;
-	    return true;
-	}
-	return false;
+        if( hasNext )
+        {
+            next = next_value;
+            ts = next_ts;
+            hasNext = false;
+            return true;
+        }
+        return false;
     }
 
     bool hasNext;
@@ -389,24 +444,25 @@ struct pull_object
 
 BOOST_AUTO_TEST_CASE( pull_stream_test )
 {
-    std::cout<<"\n*** STREAM_ALIGNER [TEST 13] ***\n";
-    PullStreamAligner reader;
-    reader.setTimeout(base::Time::fromSeconds(2.0));
+    std::cout<<"\n*** STREAM_ALIGNER [TEST 14] ***\n";
+    PullStreamAligner<NUMBER_OF_STREAMS> aligner;
+    aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     pull_object<std::string> p1;
     pull_object<std::string> p2;
 
     /** callback, period_time, (optional) priority **/
-    reader.registerStream<std::string, 4>(boost::bind( &pull_object<std::string>::getNext, &p1, _1, _2 ), &test_callback, base::Time::fromSeconds(2));
-    reader.registerStream<std::string, 4>(boost::bind( &pull_object<std::string>::getNext, &p2, _1, _2 ), &test_callback, base::Time::fromSeconds(2), 1);
+    const size_t N = 4;
+    aligner.registerPullStream<std::string, N>(boost::bind( &pull_object<std::string>::getNext, &p1, _1, _2 ), &test_callback, base::Time::fromSeconds(2));
+    aligner.registerPullStream<std::string, N>(boost::bind( &pull_object<std::string>::getNext, &p2, _1, _2 ), &test_callback, base::Time::fromSeconds(2), 1);
 
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "");
 
     p1.setNext(base::Time::fromSeconds(2.0), std::string("b"));
     p2.setNext(base::Time::fromSeconds(1.0), std::string("a"));
-    while( reader.pull() );
+    while(aligner.pull());
 
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "a");
-    last_sample = ""; reader.step<std::string, 4>(); BOOST_CHECK(last_sample == "b");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "a");
+    last_sample = ""; aligner.step<std::string>(); BOOST_CHECK(last_sample == "b");
 }
 

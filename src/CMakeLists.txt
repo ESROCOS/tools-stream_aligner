@@ -2,10 +2,9 @@ set(headers CircularArray.hpp
             TimestampStatus.hpp
             TimestampEstimator.hpp
             StreamAligner.hpp
-	    StreamAlignerStatus.hpp)
+            StreamAlignerStatus.hpp)
 
-set(sources TimestampEstimator.cpp
-	    StreamAlignerStatus.cpp)
+set(sources TimestampEstimator.cpp)
 
 rock_library(stream_aligner
                 HEADERS ${headers}

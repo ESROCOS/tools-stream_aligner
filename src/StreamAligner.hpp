@@ -483,7 +483,6 @@ namespace stream_aligner
          *
          *  @result - true if a callback was called and more data might be available 
          */
-        template<class T>
         bool step()
         {
             /** copy streams vector and sort it by next ts **/

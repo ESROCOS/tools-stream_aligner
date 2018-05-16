@@ -38,8 +38,8 @@ int main()
 
     /** callback, period_time, (optional) priority **/
     int s1 = aligner.registerStream<std::string, N_S1>(&string_callback, base::Time::fromSeconds(2)); 
-    int s2 = aligner.registerStream<double, N_S2>(&double_callback, base::Time::fromSeconds(2), 1);
-    int s3 = aligner.registerStream<int, N_S3>(&int_callback, base::Time::fromSeconds(2), 1);
+    int s2 = aligner.registerStream<double, N_S2>(&double_callback, base::Time::fromSeconds(0.5), 1);
+    int s3 = aligner.registerStream<int, N_S3>(&int_callback, base::Time::fromSeconds(1), 1);
 
 
     /** Push samples in stream 1 **/

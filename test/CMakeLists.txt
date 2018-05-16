@@ -10,7 +10,7 @@ rock_testsuite(streamaligner-test test_streamaligner.cpp
     DEPS stream_aligner
     DEPS_PKGCONFIG base-types)
 
-rock_executable(integration-test test_integration.cpp
+rock_executable(example-usage test_example_usage.cpp
     DEPS stream_aligner
     DEPS_PKGCONFIG base-types)
 

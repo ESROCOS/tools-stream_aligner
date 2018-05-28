@@ -4,7 +4,7 @@
 
 Stream Aligner and Time stamp utility for the ESROCOS framework. This utility is
 only useful in the dataflow of component-based systems, this is in port-driven
-functions of ![TASTE] (https://taste.tuxfamily.org). The processing is done
+functions of [TASTE](https://taste.tuxfamily.org). The processing is done
 asynchronously: components process data as it arrives. Since different
 processing chains have different computation times, it means that our carefully
 timestamped data will most probably arrive out-of-order at the components that
@@ -85,11 +85,15 @@ dropped. This parameter is therefore a trade-off between the maximum latency
 that the processing chain can accept and how exact the result needs to be.
 
 ## Example of Usage
-There is an example of usage in the test folder ![here](). The example explain
-the use of the Stream Aligner in order to process the samples in three different
-streams. Configuration numbers are king in the Stream Aligner, the following
-code show the more important ones:
+There is an example of usage in the test folder
+[here](test/test_example_usage.cpp).
+The example explain the use of the Stream Aligner in order to process the
+samples in three different streams. The example is graohically exapleined here:
 
+![Example Usage Figure](doc/figures/stream_aligner_example.png)
+
+Configuration numbers are key in the Stream Aligner, the following
+code explains the more important ones:
 
 ```cpp
 /** Windows size in seconds **/

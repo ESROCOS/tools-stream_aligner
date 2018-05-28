@@ -4,7 +4,7 @@
 
 Stream Aligner and Time stamp utility for the ESROCOS framework. This utility is
 only useful in the dataflow of component-based systems, this is in port-driven
-functions of [TASTE] (https://taste.tuxfamily.org). The processing is done
+functions of ![TASTE] (https://taste.tuxfamily.org). The processing is done
 asynchronously: components process data as it arrives. Since different
 processing chains have different computation times, it means that our carefully
 timestamped data will most probably arrive out-of-order at the components that
@@ -12,7 +12,7 @@ need it.
 
 Let’s see, as an example, the following processing chain:
 
-![Rock StreamAligner Picture](https://www.rock-robotics.org/documentation/data_processing/stream_aligner_chain.png)
+![Rock StreamAligner Figure](https://www.rock-robotics.org/documentation/data_processing/stream_aligner_chain.png)
 
 In this chain, sensors are fused through two paths. One path processes lidar
 data to remove outliers and body parts (laser filter). In another path, a stereo
@@ -39,6 +39,8 @@ being passed to a callback.
 ## Period, latency and stream aligner timeout
 Let’s look at the example of the laser filter again:
 
+![Rock Latency Figure](https://www.rock-robotics.org/documentation/data_processing/stream_aligner_period_latency_timeout_1.png)
+
 If, as this diagram shows, the laser filter starts processing as soon as the
 lidar sample arrives, it means that the stream aligner would, in this case, have
 determined that it is impossible that a motion tracker sample arrives in between
@@ -48,11 +50,45 @@ With no additional information, however, the stream aligner would have to wait
 that another sample arrives on the motion tracker before processing the first
 laser sample:
 
+![Rock Latency Delay Figure](https://www.rock-robotics.org/documentation/data_processing/stream_aligner_period_latency_timeout_2.png)
+
+
+Which builds up latency...To avoid this, the stream aligner allows to set a
+period parameter on each stream. This period parameter (which is also called
+lookahead in event-based systems) is the time after a sample in which there is a
+guarantee that no other sample arrives. It is called period in the stream
+aligner as it is the value of the input periods, for periodic inputs such as
+common robotic sensors. When visualizing the period, the above example looks
+therefore like:
+
+![Rock Timeout Figure](https://www.rock-robotics.org/documentation/data_processing/stream_aligner_period_latency_timeout.png)
+
+
+---
+**NOTE**
+
+Because processing based on the stream aligner is based on the fact that samples
+are passed in-order, the stream aligner must drop samples that arrive “in the
+past”, i.e. that arrive with an earlier timestamp that the last sample “played”
+by the stream aligner. So, it is better to give a period that is lower than the
+actual sensor period so that the aligner does not drop samples unnecessarily.
+
+---
+
+In order to not wait forever for samples that will never arrive (lost samples),
+the stream aligner also allows to set a timeout parameter, which is the highest
+latency that the aligner would allow to build up. When the latency induced by
+the stream aligner is higher than this value, the aligner starts playing queued
+samples regardless of the fact that, in principle, some samples should arrive on
+the other streams. If these samples do arrive anyway, they will therefore get
+dropped. This parameter is therefore a trade-off between the maximum latency
+that the processing chain can accept and how exact the result needs to be.
+
+
 
 
 ## Example of Usage
-
-There is an example of Usage with 
+There is an example of usage in the test folder ![here]() 
 
 
 

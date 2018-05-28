@@ -91,8 +91,7 @@ streams. Configuration numbers are king in the Stream Aligner, the following
 code show the more important ones:
 
 
-```cpp```
-
+```cpp
 /** Windows size in seconds **/
 #define WINDOW_SIZE 5
 
@@ -119,7 +118,6 @@ code show the more important ones:
 #define HIGH_PRIORITY 1
 #define MEDIUM_PRIORITY 2
 #define LOW_PRIORITY 3
-
-``` ```
+```
 
 

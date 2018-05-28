@@ -87,17 +87,17 @@ int main()
     aligner.push<double, N_S2>(s2, base::Time::fromSeconds(1.0), 0.3186);
     aligner.push<double, N_S2>(s2, base::Time::fromSeconds(1.5), 0.3265);
     aligner.push<double, N_S2>(s2, base::Time::fromSeconds(2.0), 0.3386);
-    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(2.5), 0.3505);
-    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(3.0), 0.3689);
-    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(3.5), 0.3756);
-    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.0), 0.3858);
+    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(2.5), 0.3405);
+    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(3.0), 0.3589);
+    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(3.5), 0.3656);
+    aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.0), 0.3758);
 
     /** Uncomment this sample to see the effect of the stream aligner **/
-    /** It would process 0.3958 -> 24 -> c **/
-    //aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.5), 0.3958);
+    /** It would process 0.3858 -> 24 -> c **/
+    //aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.5), 0.3858);
 
-    /** Instead the previous push: in case samples are lost, it would process 24 -> c -> 0.3958 **/
-    //aligner.push<double, N_S2>(s2, base::Time::fromSeconds(6.0), 0.3958);
+    /** Instead the previous push: in case samples are lost, it would process 24 -> c -> 0.3858 **/
+    //aligner.push<double, N_S2>(s2, base::Time::fromSeconds(6.0), 0.3858);
 
     /** Push samples in stream 3 **/
     aligner.push<int, N_S3>(s3, base::Time::fromSeconds(1.0), 20);

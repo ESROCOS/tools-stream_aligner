@@ -27,11 +27,11 @@ The Stream Aligner ensures that data is processed in order by (1) queueing
 timestamped data, and (2) calling registered callbacks in the order of the
 timestamps. The general principle is therefore that:
 
-..* one callback is registered for each data stream
-..* data is pushed as it arrives in the corresponding streams. The leading
+* one callback is registered for each data stream.
+* data is pushed as it arrives in the corresponding streams. The leading
 assumption is that, on each stream, the timestamps are monotonous (they don’t go
 back in time).
-..* the respective callbacks get called when it is time to process the relevant
+* the respective callbacks get called when it is time to process the relevant
 samples. This is done only when the stream aligner determined that no sample
 from other streams can arrive with an earlier timestamp then the one that is
 being passed to a callback.

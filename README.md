@@ -84,11 +84,42 @@ the other streams. If these samples do arrive anyway, they will therefore get
 dropped. This parameter is therefore a trade-off between the maximum latency
 that the processing chain can accept and how exact the result needs to be.
 
-
-
-
 ## Example of Usage
-There is an example of usage in the test folder ![here]() 
+There is an example of usage in the test folder ![here](). The example explain
+the use of the Stream Aligner in order to process the samples in three different
+streams. Configuration numbers are king in the Stream Aligner, the following
+code show the more important ones:
 
+
+```cpp```
+
+/** Windows size in seconds **/
+#define WINDOW_SIZE 5
+
+/** Number of streams or provided interfaces (config value) **/
+#define NUMBER_OF_STREAMS 3
+
+/** Stream periods (configuration value) **/
+#define S1_PERIOD 2.0
+#define S2_PERIOD 0.5
+#define S3_PERIOD 1.0
+
+/** Stream aligner timeout (config value)
+* this defines the highest larency **/
+#define TIMEOUT S1_PERIOD //the lowest period
+
+/** Buffer size as a computation of timeout and period scaled witha factor
+ * typical two in order to store two cycles of timeout**/
+#define BUFFER_SIZE_S1 CEILING(WINDOW_SIZE, S1_PERIOD)
+#define BUFFER_SIZE_S2 CEILING(WINDOW_SIZE, S2_PERIOD)
+#define BUFFER_SIZE_S3 CEILING(WINDOW_SIZE, S3_PERIOD)
+
+/** When samples have the same time, the priority defines which one to choose at
+ * first **/
+#define HIGH_PRIORITY 1
+#define MEDIUM_PRIORITY 2
+#define LOW_PRIORITY 3
+
+``` ```
 
 

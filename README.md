@@ -87,20 +87,28 @@ that the processing chain can accept and how exact the result needs to be.
 ## Example of Usage
 There is an example of usage in the test folder
 [here](test/test_example_usage.cpp).
-The example explain the use of the Stream Aligner in order to process the
-samples in three different streams. The example is graohically exapleined here:
+The example has three streams, one for `string`, one for `double` and a third
+one for `integer` type.  The Stream Aligner processes the samples and executes
+them in the right order according to the given information. The example is
+graphically depicted in the following:
 
 ![Example Usage Figure](doc/figures/stream_aligner_example.png)
 
-Configuration numbers are key in the Stream Aligner, the following
-code explains the more important ones:
+Right configuration values are given in order for the Stream Aligner to
+interpret the timing. The first number to consider is the `NUMBER_OF_STREAMS`
+because the Stream Aligner is a static and fully templated class. The following
+values are `WINDOW_SIZE` and samples period (e.g., `S1_PERIOD`) in order to size
+the circular buffer. Those values define how many samples you want to store in
+the buffer. Once these values are defined, the priority (optional) can be set.
+Normally, the stream with highest frequency has the highest priority. The code
+with the configuration values is here:
 
 ```cpp
-/** Windows size in seconds **/
-#define WINDOW_SIZE 5
-
 /** Number of streams or provided interfaces (config value) **/
 #define NUMBER_OF_STREAMS 3
+
+/** Windows size in seconds **/
+#define WINDOW_SIZE 5
 
 /** Stream periods (configuration value) **/
 #define S1_PERIOD 2.0

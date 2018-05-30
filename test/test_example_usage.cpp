@@ -19,7 +19,7 @@
 
 /** Stream aligner timeout (config value)
 * this defines the highest larency **/
-#define TIMEOUT S1_PERIOD //the lowest period
+#define TIMEOUT S1_PERIOD+0.01 //a bit bigger than the lowest period
 
 /** Buffer size as a computation of timeout and period scaled witha factor
  * typical two in order to store two cycles of timeout**/
@@ -80,7 +80,7 @@ int main()
     /** Push samples in stream 1 **/
     aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(1.0), std::string("a"));
     aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(3.0), std::string("b"));
-    aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("k")); //arrive in the past
+    aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("z")); //arrive in the past
     aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(5.0), std::string("c"));
 
     /** Push samples in stream 2 **/
@@ -101,18 +101,44 @@ int main()
 
     /** Process the samples **/
     /** the aligner returns false after processing sample 23 from s2 **/
+    std::cout<<"******\n";
     while(aligner.step())
     {
         //std::cout<<"RETURN TRUE\n";
     }
 
     /** It would process 0.3858 -> 24 -> c **/
-    std::cout<<"******\n";
     aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.5), 0.3858);
     /** Instead the previous push: in case samples are lost, it would process 24 -> c -> 0.3858 **/
     /** Uncomment the followin line in order to see the effect of the stream aligner **/
     //aligner.push<double, N_S2>(s2, base::Time::fromSeconds(5.5), 0.3858);
 
     /** Keep processing the samples **/
+    std::cout<<"******\n";
     while(aligner.step());
+
+    /** Push samples in stream 3 **/
+    aligner.push<int, N_S3>(s3, base::Time::fromSeconds(6.0), 25);
+    aligner.push<int, N_S3>(s3, base::Time::fromSeconds(7.0), 26);
+    aligner.push<int, N_S3>(s3, base::Time::fromSeconds(8.0), 27);
+    aligner.push<int, N_S3>(s3, base::Time::fromSeconds(9.0), 28);
+    aligner.push<int, N_S3>(s3, base::Time::fromSeconds(10.0), 29);
+
+    /** Keep processing the samples **/
+    std::cout<<"******\n";
+    while(aligner.step());
+
+    double t = 5.0;
+    double data = 0.3959;
+    for (size_t i=0; i<20; ++i)
+    {
+        /** Push samples in stream 2 **/
+        aligner.push<double, N_S2>(s2, base::Time::fromSeconds(t), data);
+
+        /** Keep processing the samples **/
+        std::cout<<"******\n";
+        while(aligner.step());
+
+        t = t + S2_PERIOD; data = data + 0.01;
+    }
 }

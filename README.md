@@ -236,4 +236,8 @@ Similar effect occurred in processing samples `0.3186` and `20`
 from stream1 and stream2 at timestamp `1 second`.
 
 
+## Further information
+More information regarding the Stream Aligner and similar usage
+in other component-based system is available
+[here](https://www.rock-robotics.org/documentation/data_processing/stream_aligner.html)
 

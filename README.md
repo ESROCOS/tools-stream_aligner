@@ -132,4 +132,108 @@ with the configuration values is here:
 #define LOW_PRIORITY 3
 ```
 
+The stream aligner object can now be instantiated. The timeout
+is the maximum time the Stream Aligner will wait for a sample in order to
+consider that sample valid to play with the rest of samples in the stream. The
+timeout is set and the streams are registered in the following:
+
+```cpp
+/**The aligner has a NUMBER_OF_STREAMS fixed size **/
+stream_aligner::StreamAligner<NUMBER_OF_STREAMS> aligner;
+const size_t N_S1 = static_cast<size_t>(BUFFER_SIZE_S1);
+const size_t N_S2 = static_cast<size_t>(BUFFER_SIZE_S2);
+const size_t N_S3 = static_cast<size_t>(BUFFER_SIZE_S3);
+
+/** Set the timeout **/
+aligner.setTimeout(base::Time::fromSeconds(TIMEOUT));
+
+/** Each stream can have a different size according to the period **/
+/** callback, period_time, (optional) priority **/
+/** The stream with the highest frequency should have the highest priority **/
+int s1 = aligner.registerStream<std::string, N_S1>(&string_callback, base::Time::fromSeconds(S1_PERIOD), LOW_PRIORITY);
+int s2 = aligner.registerStream<double, N_S2>(&double_callback, base::Time::fromSeconds(S2_PERIOD), HIGH_PRIORITY);
+int s3 = aligner.registerStream<int, N_S3>(&int_callback, base::Time::fromSeconds(S3_PERIOD), MEDIUM_PRIORITY);
+```
+
+Now, we can start pushing samples in the streams. Normally, pushing and popping
+data (step method) will appear in the same loop. However, for simplicity we
+first push the samples and then pop all the samples in that order. The following
+code push four samples in the first stream (stream1), but three are pushed since one
+sample arrives late on time:
+
+```cpp
+/** Push samples in stream 1 **/
+aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(1.0), std::string("a"));
+aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(3.0), std::string("b"));
+aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("k")); //arrive in the past
+aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(5.0), std::string("c"));
+```
+
+We push samples in stream2 and stream3:
+
+```cpp
+/** Push samples in stream 2 **/
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(1.0), 0.3186);
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(1.5), 0.3265);
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(2.0), 0.3386);
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(2.5), 0.3405);
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(3.0), 0.3589);
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(3.5), 0.3656);
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.0), 0.3758);
+
+/** Push samples in stream 3 **/
+aligner.push<int, N_S3>(s3, base::Time::fromSeconds(1.0), 20);
+aligner.push<int, N_S3>(s3, base::Time::fromSeconds(2.0), 21);
+aligner.push<int, N_S3>(s3, base::Time::fromSeconds(3.0), 22);
+aligner.push<int, N_S3>(s3, base::Time::fromSeconds(4.0), 23);
+aligner.push<int, N_S3>(s3, base::Time::fromSeconds(5.0), 24);
+```
+We can now run the example test and see the output, but first we have to add the
+`step()` method to pop the samples and execute the call_back function in the
+right order. The console output of the program would be:
+
+```console
+root@taste#️ ./build/test/example-usage
+double last_sample[19700101-00:00:01:000000]: 0.318600
+Integer last_sample[19700101-00:00:01:000000]: 20
+String last_sample[19700101-00:00:01:000000]: a
+Double last_sample[19700101-00:00:01:500000]: 0.326500
+Double last_sample[19700101-00:00:02:000000]: 0.338600
+Integer last_sample[19700101-00:00:02:000000]: 21
+Double last_sample[19700101-00:00:02:500000]: 0.340500
+Double last_sample[19700101-00:00:03:000000]: 0.358900
+Integer last_sample[19700101-00:00:03:000000]: 22
+String last_sample[19700101-00:00:03:000000]: b
+Double last_sample[19700101-00:00:03:500000]: 0.365600
+Double last_sample[19700101-00:00:04:000000]: 0.375800
+Integer last_sample[19700101-00:00:04:000000]: 23
+```
+
+We can see that the Stream Aligner did not process the sample that arrived late
+in stream1. In addition, the Stream Aligner does not process the last samples in stream1
+and stream2 because it is waiting for a sample in the stream3. Until the sample
+is not pushed in stream3, the `step()` method cannot process the rest of samples:
+
+```cpp
+/** Push the sample that is missing **/
+aligner.push<double, N_S2>(s2, base::Time::fromSeconds(4.5), 0.3858);
+
+/** Keep processing the samples **/
+while(aligner.step());
+```
+
+This create the following ouput when further processing the samples:
+```console
+Double last_sample[19700101-00:00:04:500000]: 0.385800
+Integer last_sample[19700101-00:00:05:000000]: 24
+String last_sample[19700101-00:00:05:000000]: c
+```
+These samples are bound together according to the timeout. In addition, it is
+important to see the effect of the priority values. A low number entails a high
+priority. This is visible in the order of processing sample `24` and `c`, from
+stream2 and stream3, which both have the same timestamp of `5 seconds`.
+Similar effect occurred in processing samples `0.3186` and `20`
+from stream1 and stream2 at timestamp `1 second`.
+
+
 

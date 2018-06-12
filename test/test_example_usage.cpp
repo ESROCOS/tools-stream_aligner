@@ -80,7 +80,7 @@ int main()
     /** Push samples in stream 1 **/
     aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(1.0), std::string("a"));
     aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(3.0), std::string("b"));
-    aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("z")); //arrive in the past
+    aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("z")); //arrives in the past
     aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(5.0), std::string("c"));
 
     /** Push samples in stream 2 **/

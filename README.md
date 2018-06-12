@@ -117,7 +117,7 @@ with the configuration values is here:
 
 /** Stream aligner timeout (config value)
 * this defines the highest larency **/
-#define TIMEOUT S1_PERIOD //the lowest period
+#define TIMEOUT S1_PERIOD+0.01 //a bit bigger than the lowest period
 
 /** Buffer size as a computation of timeout and period scaled witha factor
  * typical two in order to store two cycles of timeout**/
@@ -158,18 +158,18 @@ int s3 = aligner.registerStream<int, N_S3>(&int_callback, base::Time::fromSecond
 Now, we can start pushing samples in the streams. Normally, pushing and popping
 data (step method) will appear in the same loop. However, for simplicity we
 first push the samples and then pop all the samples in that order. The following
-code push four samples in the first stream (stream1), but three are pushed since one
+code push four samples in the first stream (`s1`), but three are pushed since one
 sample arrives late on time:
 
 ```cpp
 /** Push samples in stream 1 **/
 aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(1.0), std::string("a"));
 aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(3.0), std::string("b"));
-aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("k")); //arrive in the past
+aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(2.0), std::string("k")); //arrives in the past
 aligner.push<std::string, N_S1>(s1, base::Time::fromSeconds(5.0), std::string("c"));
 ```
 
-We push samples in stream2 and stream3:
+We push samples in `s2` and `s3`:
 
 ```cpp
 /** Push samples in stream 2 **/
@@ -190,7 +190,13 @@ aligner.push<int, N_S3>(s3, base::Time::fromSeconds(5.0), 24);
 ```
 We can now run the example test and see the output, but first we have to add the
 `step()` method to pop the samples and execute the call_back function in the
-right order. The console output of the program would be:
+right order.
+
+```cpp
+while(aligner.step()){}
+```
+
+The console output of the program would be:
 
 ```console
 root@taste#️ ./build/test/example-usage
@@ -210,9 +216,10 @@ Integer last_sample[19700101-00:00:04:000000]: 23
 ```
 
 We can see that the Stream Aligner did not process the sample that arrived late
-in stream1. In addition, the Stream Aligner does not process the last samples in stream1
-and stream2 because it is waiting for a sample in the stream3. Until the sample
-is not pushed in stream3, the `step()` method cannot process the rest of samples:
+in `s1` (with value `k`). In addition, the Stream Aligner does not process the last samples in `s1`
+and `s3` because it is waiting for a sample in the `s2`. Until the sample
+is not pushed in `s2`, the `step()` method cannot process the samples on the
+other streams:
 
 ```cpp
 /** Push the sample that is missing **/
@@ -231,13 +238,13 @@ String last_sample[19700101-00:00:05:000000]: c
 These samples are bound together according to the timeout. In addition, it is
 important to see the effect of the priority values. A low number entails a high
 priority. This is visible in the order of processing sample `24` and `c`, from
-stream2 and stream3, which both have the same timestamp of `5 seconds`.
+`s1` and `s3`, which both have the same timestamp of `5 seconds`.
 Similar effect occurred in processing samples `0.3186` and `20`
-from stream1 and stream2 at timestamp `1 second`.
+from `s2` and `s3` at timestamp `1 second`.
 
 
 ## Further information
-More information regarding the Stream Aligner and similar usage
-in other component-based system is available
+More information regarding the Stream Aligner and a similar usage
+in another component-based system like Rock is available
 [here](https://www.rock-robotics.org/documentation/data_processing/stream_aligner.html)
 

@@ -155,12 +155,14 @@ namespace stream_aligner
 
         void copyState(const PullStreamAligner<NUMBER_STREAMS>& other)
         {
-            this-> template copyState(other);
+
+            //this-> template copyState(other);
+            StreamAligner<NUMBER_STREAMS>::copyState(other);
 
             assert(this->pull_streams.size() == other.pull_streams.size() );
             for(size_t i=0;i<this->pull_streams.size();i++)
             {
-                this->pull_streams[i]->copyState( *other.pull_streams[i] );
+                this->pull_streams[i]->copyState( *(other.pull_streams[i]) );
             }
         }
     };

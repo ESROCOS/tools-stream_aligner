@@ -445,7 +445,7 @@ struct pull_object
 BOOST_AUTO_TEST_CASE( pull_stream_test )
 {
     std::cout<<"\n*** STREAM_ALIGNER [TEST 14] ***\n";
-    PullStreamAligner<NUMBER_OF_STREAMS> aligner;
+    PullStreamAligner<2> aligner;
     aligner.setTimeout(base::Time::fromSeconds(2.0));
 
     pull_object<std::string> p1;
@@ -464,5 +464,10 @@ BOOST_AUTO_TEST_CASE( pull_stream_test )
 
     last_sample = ""; aligner.step(); BOOST_CHECK(last_sample == "a");
     last_sample = ""; aligner.step(); BOOST_CHECK(last_sample == "b");
+
+    PullStreamAligner<2> other;
+    other.registerPullStream<std::string, N>(boost::bind( &pull_object<std::string>::getNext, &p1, _1, _2 ), &test_callback, base::Time::fromSeconds(2));
+    other.registerPullStream<std::string, N>(boost::bind( &pull_object<std::string>::getNext, &p2, _1, _2 ), &test_callback, base::Time::fromSeconds(2), 1);
+    other.copyState(aligner);
 }
 
